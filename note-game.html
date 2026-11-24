@@ -543,6 +543,11 @@ const SG=["Mi'. Fa'_ Mi'_ Sol_ Fa_ Re'_ | Do'- Mi- | Sol. La_ Si_ Fa'_ La_ Fa'_ 
   "Si. Do'_ Re'_ Sol_ Fa_ Re'_ | Do'. Sol_ Mi'- | Re'. Re'_ Re'_ Re'_ Mi'_ Re'_ | Re'---",
   "Mi'. Fa'_ Mi'_ Sol_ Fa_ Re'_ | Do'- Mi- | Sol. La_ Si_ Fa'_ Mi'_ Re'_ | Do'---"];
 const BUILTIN=[
+  {id:'sus',group:'四年級',name:'噢！蘇珊娜（全曲）',tempo:96,pickup:1,text:"Do_ Re_ | Mi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Do | Re- 0 Do_ Re_\nMi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Re | Do-. 0\nFa- Fa- | La La- La | Sol Sol Mi Do | Re- 0 Do_ Re_\nMi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Re | Do-."},
+  {id:'sus1',group:'四年級',name:'噢！蘇珊娜 第一行',tempo:96,pickup:1,text:"Do_ Re_ | Mi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Do | Re- 0"},
+  {id:'sus2',group:'四年級',name:'噢！蘇珊娜 第二行',tempo:96,pickup:1,text:"Do_ Re_ | Mi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Re | Do-. 0"},
+  {id:'sus3',group:'四年級',name:'噢！蘇珊娜 第三行',tempo:96,pickup:0,text:"Fa- Fa- | La La- La | Sol Sol Mi Do | Re- 0"},
+  {id:'sus4',group:'四年級',name:'噢！蘇珊娜 第四行',tempo:96,pickup:1,text:"Do_ Re_ | Mi Sol Sol. La_ | Sol Mi Do. Re_ | Mi Mi Re Re | Do-."},
   {id:'yz',group:'五年級',name:'永遠同在（全曲）',tempo:92,meter:'3/4',pickup:1,text:"Fa_ Sol_ | La_ Fa_ Do'. La_ | Sol Do' Sol | Fa_ Re_ La. Fa_ | Mi- Fa_ Mi_\nRe Mi Fa_ Sol_ | Do Fa Sol_ La_ | Sib Sib_ La_ Sol_ Fa_ | Sol- Fa_ Sol_\nLa_ Fa_ Do'. La_ | Sol Do' Sol | Fa_ Re_ Re Mi_ Fa_ | Do- Do\nRe Mi Fa_ Sol_ | Do Fa Sol_ La_ | Sib Sib_ La_ Sol_ Fa_ | Fa--\nLa_ Sib_ | Do' Do' Do' | Do' Do'_ Re'_ Do'_ Sib_ | La La La\nLa La_ Sib_ La_ Sol_ | Fa Fa Fa_ Mi_ | Re Mi Mi_ Fa_ | Sol Sol_ La_ Sol_ La_\nSol- La_ Sib_ | Do' Do' Do' | Do' Do'_ Re'_ Do'_ Sib_ | La La La\nLa_ Sib_ La_ Sol_ Fa_ Mi_ | Re Re_ Mi_ Fa_ Sol_ | Do Fa Sol_ La_ | Sol- Sol_ Fa_\nFa--"},
   {id:'yz1',group:'五年級',name:'永遠同在 第一關',tempo:92,meter:'3/4',pickup:1,text:"Fa_ Sol_ | La_ Fa_ Do'. La_ | Sol Do' Sol | Fa_ Re_ La. Fa_ | Mi- Fa_ Mi_\nRe Mi Fa_ Sol_ | Do Fa Sol_ La_ | Sib Sib_ La_ Sol_ Fa_ | Sol-"},
   {id:'yz2',group:'五年級',name:'永遠同在 第二關',tempo:92,meter:'3/4',pickup:1,text:"Fa_ Sol_ | La_ Fa_ Do'. La_ | Sol Do' Sol | Fa_ Re_ Re Mi_ Fa_ | Do- Do\nRe Mi Fa_ Sol_ | Do Fa Sol_ La_ | Sib Sib_ La_ Sol_ Fa_ | Fa--"},
@@ -590,7 +595,7 @@ const BUILTIN=[
   {id:'high',name:'高音挑戰',tempo:88,text:"Do' Re' Mi' Re' | Do' Si La- | Sol La Si Do' | Re' Mi' Re'- | Mi' Re' Do' Si | La Sol La Si | Do'---"},
 ];
 
-BUILTIN.forEach(s=>{if(/^yz/.test(s.id))s.folder='永遠同在';else if(/^anth/.test(s.id))s.folder='國歌';else if(/^flag/.test(s.id))s.folder='國旗歌';else if(/^mary3/.test(s.id))s.folder='瑪莉有隻小綿羊';else if(/^old3/.test(s.id))s.folder='王老先生有塊地';else if(/^sg/.test(s.id))s.folder='夕陽中的銀髮';else if(/^lh/.test(s.id))s.folder='燈塔';});
+BUILTIN.forEach(s=>{if(/^sus/.test(s.id))s.folder='噢！蘇珊娜';else if(/^yz/.test(s.id))s.folder='永遠同在';else if(/^anth/.test(s.id))s.folder='國歌';else if(/^flag/.test(s.id))s.folder='國旗歌';else if(/^mary3/.test(s.id))s.folder='瑪莉有隻小綿羊';else if(/^old3/.test(s.id))s.folder='王老先生有塊地';else if(/^sg/.test(s.id))s.folder='夕陽中的銀髮';else if(/^lh/.test(s.id))s.folder='燈塔';});
 function parseSong(text){
   const toks=text.replace(/[|｜,，、\n\r\t]/g,' ').split(/\s+/).filter(Boolean);
   const notes=[],bad=[];

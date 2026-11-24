@@ -2226,6 +2226,8 @@ body:not(.tmode) [data-a="maplock"]{display:none!important}
 .hlp summary i{font-style:normal;font-size:26px}
 .hlpb{padding:0 18px 12px;font-size:17px;line-height:1.7}.hlpb p{margin:4px 0}.hlpb ol,.hlpb ul{margin:4px 0;padding-left:1.4em}
 
+.ctbox{max-width:620px;margin:12px auto;padding:12px 16px;border-radius:18px;background:#f0fdf4;border:3px solid #22c55e;color:#14532d;text-align:center;font-size:18px}.ctbox p{font-size:19px}.ctbox p{margin:6px 0;line-height:1.6}.ctbox small{display:block;color:#3f6212;margin:4px 0}.ctbox button{margin-top:6px}
+
 </style>
 </head>
 <body>
@@ -3438,9 +3440,9 @@ const spInfo=a=>SPR.find(x=>x[0]===a),spOwn=()=>PF.sp||(PF.sp={});
 const gTier=a=>rarOf((AVS.find(x=>x[0]===a)||GPOOL.find(x=>x[0]===a)||[0,0])[1]);
 function gRoll(minR){let t=0,r=Math.random(),c=0;for(let k=0;k<5;k++){c+=GR[k][2];if(r<c){t=k;break}t=k}
  if(minR&&t<minR)t=minR;const L=GPOOL.filter(x=>rarOf(x[1])===t);return L[Math.floor(Math.random()*L.length)][0]}
-const VCN="魔法藥水兌換券",VCH=(()=>{let v=LS.get("rgVouch",null);if(!v||!Array.isArray(v.list))v={left:16,list:[]};return v})();let VMSG="";
-/* ===== Firebase（全班共用兌換券名單）：填好 projectId 與 apiKey 就會啟用；留空則只存在這台平板 ===== */
-const FBDEF={projectId:"",apiKey:""};/* 選用：填入自己學校的 Firebase 專案，就能啟用「全校排行榜」與「兌換券雲端登記」。也可以在遊戲裡「⚙ 設定 → 🛠 進階設定」填寫。留空＝資料只存在這台平板。 */const FBCFG=(()=>{try{const o=JSON.parse(localStorage.getItem("rgFB")||"null");if(o&&o.projectId&&o.apiKey)return{projectId:String(o.projectId),apiKey:String(o.apiKey)}}catch(e){}return FBDEF})(),VCMAX=16;
+const VCN="樂透",VCH=(()=>{let v=LS.get("rgVouch",null);if(!v||!Array.isArray(v.list))v={left:16,list:[]};return v})();let VMSG="";
+/* ===== Firebase（全班共用樂透名單）：填好 projectId 與 apiKey 就會啟用；留空則只存在這台平板 ===== */
+const FBDEF={projectId:"",apiKey:""};/* 選用：填入自己學校的 Firebase 專案，就能啟用「全校排行榜」與「樂透雲端登記」。也可以在遊戲裡「⚙ 設定 → 🛠 進階設定」填寫。留空＝資料只存在這台平板。 */const FBCFG=(()=>{try{const o=JSON.parse(localStorage.getItem("rgFB")||"null");if(o&&o.projectId&&o.apiKey)return{projectId:String(o.projectId),apiKey:String(o.apiKey)}}catch(e){}return FBDEF})(),VCMAX=16;
 const FB=()=>!!(FBCFG.projectId&&FBCFG.apiKey),FBU=p=>`https://firestore.googleapis.com/v1/projects/${FBCFG.projectId}/databases/(default)/documents/${p}`;
 const fbv=f=>({n:(f.name||{}).stringValue||"",c:(f.cls||{}).stringValue||"",uid:(f.uid||{}).stringValue||"",t:+((f.t||{}).integerValue||0),u:+((f.used||{}).integerValue||0)});
 async function vcList(){const r=await fetch(FBU("slots")+"?pageSize=300&key="+FBCFG.apiKey);if(!r.ok)throw new Error("list "+r.status);const j=await r.json();return(j.documents||[]).map(d=>({id:d.name.split("/").pop(),...fbv(d.fields||{})}))}
@@ -3456,8 +3458,8 @@ async function vcClaim(){if(!FB()||VCBUSY||PF.vcDone===1||PF.vcDone===2)return;V
    for(let i=1;i<=VCMAX&&!got;i++){if(L.some(x=>x.id===String(i)))continue;
     const r=await fetch(FBU("slots")+"?documentId="+i+"&key="+FBCFG.apiKey,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({fields:{name:{stringValue:PF.name||""},cls:{stringValue:cn},uid:{stringValue:PF.uid},t:{integerValue:String(Date.now())},used:{integerValue:"0"}}})});
     if(r.ok)got=i;else if(r.status!==409)throw new Error("claim "+r.status)}
-   if(got){PF.vcDone=1;PF.vcId=String(got);msg="🧪 恭喜集滿 50 隻精靈！獲得「"+VCN+"」，請找老師兌換！"}
-   else{PF.vcDone=2;msg="🎉 集滿 50 隻精靈了！可惜兌換券已經發完。"}}
+   if(got){PF.vcDone=1;PF.vcId=String(got);msg="🎟️ 恭喜集滿 50 隻精靈！獲得「"+VCN+"」，請找老師兌換！"}
+   else{PF.vcDone=2;msg="🎉 集滿 50 隻精靈了！可惜樂透已經發完。"}}
   LS.set("rgProf",PF);VCLAST=0;await vcSync(true);if(msg)toast(msg,true)}
  catch(e){PF.vcDone=3;LS.set("rgProf",PF)}
  VCBUSY=false}
@@ -3466,8 +3468,8 @@ async function tConfirm(id){const r=await fetch(FBU("slots/"+id)+"?updateMask.fi
 function vchCheck(){VMSG="";if(Object.keys(spOwn()).length<SPR.length)return;
  if(FB()){if(PF.vcDone===1||PF.vcDone===2)return;PF.vcDone=3;LS.set("rgProf",PF);vcClaim();return}
  if(PF.vcDone)return;
- if(VCH.left>0){VCH.left--;const it={id:"v"+Date.now().toString(36)+Math.floor(Math.random()*999),n:PF.name||"",c:(typeof curC==="function"&&curC()&&curC().name)||"",t:Date.now(),u:0};VCH.list.push(it);PF.vcDone=1;PF.vcId=it.id;VMSG="🧪 恭喜集滿 50 隻精靈！獲得「"+VCN+"」，請找老師兌換！"}
- else{PF.vcDone=2;VMSG="🎉 集滿 50 隻精靈了！可惜兌換券已經發完。"}
+ if(VCH.left>0){VCH.left--;const it={id:"v"+Date.now().toString(36)+Math.floor(Math.random()*999),n:PF.name||"",c:(typeof curC==="function"&&curC()&&curC().name)||"",t:Date.now(),u:0};VCH.list.push(it);PF.vcDone=1;PF.vcId=it.id;VMSG="🎟️ 恭喜集滿 50 隻精靈！獲得「"+VCN+"」，請找老師兌換！"}
+ else{PF.vcDone=2;VMSG="🎉 集滿 50 隻精靈了！可惜樂透已經發完。"}
  LS.set("rgVouch",VCH);LS.set("rgProf",PF)}
 function gPull(n){const cost=n===1?GC1:GC10;if(!GPOOL.length||coins()<cost)return null;addCoins(-cost);const out=[];let hi=false;
  for(let k=0;k<n;k++){const a=gRoll(n===10&&k===9&&!hi?1:0);if(gTier(a)>=1)hi=true;const t=gTier(a),isNew=!spOwn()[a];let back=0;if(isNew)PF.sp[a]=Date.now();out.push({a,t,isNew,back})}
@@ -3478,7 +3480,7 @@ function gachaFill(){const c=$("gbox"),empty=!GPOOL.length;
  <div class="gwrap"><div class="gimg" id="gimg" role="img" aria-label="魔法扭蛋機"></div><div class="gbtns gov"><button class="qa claim gb" data-g="1"${!empty&&coins()>=GC1?"":" disabled"}>🎰 扭 1 次<br><small>💰 ${GC1}</small></button><button class="qa claim gb" data-g="10"${!empty&&coins()>=GC10?"":" disabled"}>🎰 十連扭<br><small>💰 ${GC10}・至少 1 個稀有</small></button></div><div id="gres"></div></div>
  <div class="gm"><p class="gtip">${empty?"🛠 新的扭蛋商品準備中，舊商品已全部下架。":`集滿 50 隻精靈可以換「${VCN}」１張！　重複的精靈不會退幣。`}</p>
  <div class="godds">${GR.map(r=>`<span style="--rc:${r[1]}">${r[0]} ${(r[2]*100).toFixed(r[2]<.05?1:0)}%</span>`).join("")}</div></div>
- <p class="sub" style="text-align:center;font-size:18px">📖 圖鑑進度 <b>${Object.keys(spOwn()).length}</b> / ${SPR.length}　🧪 兌換券剩 <b>${VCH.left}</b> 張${PF.vcDone===1?"　✅ 你已獲得兌換券！":PF.vcDone===3?"　⏳ 兌換券登記中（需要網路）":""}</p>`;
+ <p class="sub" style="text-align:center;font-size:18px">📖 圖鑑進度 <b>${Object.keys(spOwn()).length}</b> / ${SPR.length}　🎟️ 樂透剩 <b>${VCH.left}</b> 張${PF.vcDone===1?"　✅ 你已獲得樂透！":PF.vcDone===3?"　⏳ 樂透登記中（需要網路）":""}</p>`;
  c.onclick=e=>{const g=e.target.closest("[data-g]");if(!g&&e.target.closest("#gres")&&!$("gres").querySelector(".gstage")){$("gres").innerHTML="";return}
   if(g){const n=+g.dataset.g,res=gPull(n);if(!res)return;const box=$("gres");hubRefresh();const gi=$("gimg");gi&&!RMq&&gi.classList.add("shk");
    box.innerHTML=`<div class="gstage"><div class="gcap${RMq?" still":""}"></div><p>扭蛋轉動中…</p></div>`;
@@ -3776,10 +3778,10 @@ renderShop=function(){const TABS=["gacha","dex","mine","tch"];if(!TABS.includes(
  let h=`<div class="shopbar"><div class="qtabs">${tab("gacha","🎰 扭蛋")}${tab("dex","📖 精靈圖鑑")}${tab("mine","🧚 我的精靈")}${tab("tch","👩‍🏫 兌換核對")}</div><span class="rs" style="color:#fff">💰 ${cn}</span></div>`;
  if(STAB==="gacha")h+=`<div id="gbox"></div>`;
  else if(STAB==="dex"){const o=spOwn();h+=`<p class="sub" style="text-align:center;font-size:20px;margin:6px 0">已收集 <b>${Object.keys(o).length}</b> / ${SPR.length}　${bar(Object.keys(o).length,SPR.length)}</p><div class="shopg spdex">${SPR.map(([e,n,t],i)=>{const has=!!o[e];return`<div class="shopi gi${has?"":" lock"}" style="--rc:${GR[t][1]}"><small style="font-weight:900;color:#8a8f99">No.${String(i+1).padStart(2,"0")}</small><i${has?"":' style="filter:brightness(0);opacity:.3"'}>${e}</i><small>${has?n:"？？？"}</small><small style="color:${GR[t][1]};font-weight:900">${has?GR[t][0]:"未取得"}</small></div>`}).join("")}</div>`}
- else if(STAB==="tch"&&FB()&&!TAUTH){h+=`<p class="sub">請老師登入後再核對兌換券。</p><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="tem" type="email" placeholder="老師信箱" style="font-size:18px;width:min(260px,70vw)"><input id="tpwfb" type="password" placeholder="密碼" style="font-size:18px;width:min(200px,60vw)"><button class="qa claim" data-tlogin="1">登入</button></div><p class="sub" id="tmsg"></p>`}
- else if(STAB==="tch"){const L=[...VCH.list].sort((a,b)=>(a.u?1:0)-(b.u?1:0)||b.t-a.t);h+=`<p class="sub">學生集滿 50 隻精靈會出現在這裡。領獎時請老師按「確認兌換」。<br>兌換券剩 <b>${VCH.left}</b> 張・已發出 ${VCH.list.length} 張・已兌換 ${VCH.list.filter(x=>x.u).length} 張</p>${FB()?`<button class="qa" data-tout="1">登出</button> <button class="qa" data-vcref="1">🔄 重新整理</button>`:`<label style="font-weight:900">剩餘張數 <input id="vcleft" type="number" min="0" max="999" value="${VCH.left}" style="width:90px;font-size:18px"></label> <button class="qa" data-vcsave="1">儲存張數</button>`}
+ else if(STAB==="tch"&&FB()&&!TAUTH){h+=`<p class="sub">請老師登入後再核對樂透。</p><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="tem" type="email" placeholder="老師信箱" style="font-size:18px;width:min(260px,70vw)"><input id="tpwfb" type="password" placeholder="密碼" style="font-size:18px;width:min(200px,60vw)"><button class="qa claim" data-tlogin="1">登入</button></div><p class="sub" id="tmsg"></p>`}
+ else if(STAB==="tch"){const L=[...VCH.list].sort((a,b)=>(a.u?1:0)-(b.u?1:0)||b.t-a.t);h+=`<p class="sub">學生集滿 50 隻精靈會出現在這裡。領獎時請老師按「確認兌換」。<br>樂透剩 <b>${VCH.left}</b> 張・已發出 ${VCH.list.length} 張・已兌換 ${VCH.list.filter(x=>x.u).length} 張</p>${FB()?`<button class="qa" data-tout="1">登出</button> <button class="qa" data-vcref="1">🔄 重新整理</button>`:`<label style="font-weight:900">剩餘張數 <input id="vcleft" type="number" min="0" max="999" value="${VCH.left}" style="width:90px;font-size:18px"></label> <button class="qa" data-vcsave="1">儲存張數</button>`}
   <div class="mclist" style="margin-top:10px">${L.map(x=>`<div class="mcmini${x.u?" used":""}" style="--rc:#3fae6a"><b>${esc(x.n||"（未命名）")}</b><small>${esc(x.c||"")}・${fmtD(x.t)} 集滿</small>${x.u?`<em>✔ ${fmtD(x.u)} 已兌換</em>`:`<button class="qa claim" data-vcok="${x.id}">確認兌換</button>`}</div>`).join("")||'<p class="sub">還沒有人集滿。</p>'}</div>`}
- else if(STAB==="mine"){const o=spOwn(),L=SPR.map((x,i)=>[x,i]).filter(([x])=>o[x[0]]).sort((a,b)=>b[0][2]-a[0][2]||o[b[0][0]]-o[a[0][0]]);h+=(PF.vcDone===1?(()=>{const v=VCH.list.find(x=>x.id===PF.vcId);return`<div class="qr" style="background:#e9fff1;border:3px solid #3fae6a;margin-bottom:10px"><div class="qi">🧪</div><div><div class="qt">${VCN}</div><div class="qd">${v&&v.u?"✔ 已兌換（"+fmtD(v.u)+"）":"集滿 50 隻精靈的獎勵！拿給老師核對兌換。"}</div></div></div>`})():PF.vcDone===2?`<p class="sub" style="text-align:center">🎉 已集滿 50 隻精靈（兌換券已發完）</p>`:"")+(L.length?`<p class="sub" style="text-align:center;font-size:18px">點一隻精靈，就能把它當成自己的頭像。</p><div class="shopg spmine">${L.map(([[e,n,t]])=>{const d=new Date(o[e]),cur=PF.av===e;return`<div class="shopi gi${cur?" cur":""}" data-spuse="${e}" style="--rc:${GR[t][1]}"><i>${e}</i><small style="font-weight:900">${n}</small><small style="color:${GR[t][1]};font-weight:900">${GR[t][0]}</small><small>${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} 取得</small></div>`}).join("")}</div>`:`<p class="sub" style="text-align:center;font-size:20px">還沒有精靈，到「🎰 扭蛋」轉一隻吧！</p>`)}
+ else if(STAB==="mine"){const o=spOwn(),L=SPR.map((x,i)=>[x,i]).filter(([x])=>o[x[0]]).sort((a,b)=>b[0][2]-a[0][2]||o[b[0][0]]-o[a[0][0]]);h+=(PF.vcDone===1?(()=>{const v=VCH.list.find(x=>x.id===PF.vcId);return`<div class="qr" style="background:#e9fff1;border:3px solid #3fae6a;margin-bottom:10px"><div class="qi">🎟️</div><div><div class="qt">${VCN}</div><div class="qd">${v&&v.u?"✔ 已兌換（"+fmtD(v.u)+"）":"集滿 50 隻精靈的獎勵！拿給老師核對兌換。"}</div></div></div>`})():PF.vcDone===2?`<p class="sub" style="text-align:center">🎉 已集滿 50 隻精靈（樂透已發完）</p>`:"")+(L.length?`<p class="sub" style="text-align:center;font-size:18px">點一隻精靈，就能把它當成自己的頭像。</p><div class="shopg spmine">${L.map(([[e,n,t]])=>{const d=new Date(o[e]),cur=PF.av===e;return`<div class="shopi gi${cur?" cur":""}" data-spuse="${e}" style="--rc:${GR[t][1]}"><i>${e}</i><small style="font-weight:900">${n}</small><small style="color:${GR[t][1]};font-weight:900">${GR[t][0]}</small><small>${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} 取得</small></div>`}).join("")}</div>`:`<p class="sub" style="text-align:center;font-size:20px">還沒有精靈，到「🎰 扭蛋」轉一隻吧！</p>`)}
  else if(STAB==="acc"){h+=`<div class="accprev"><i class="av big" style="${frameSt()}">${avHTML()}</i><div><b style="font-size:20px">我的角色</b><p class="sub" style="margin:4px 0">每一類可以戴一件，點「穿上」或「卸下」。</p></div></div>`;
   Object.keys(SLOT).forEach(sl=>{h+=`<h3 style="margin:12px 0 6px">${SLOT[sl]}</h3><div class="shopg">${ACC.filter(a=>a.s===sl).map(a=>{const own=PF.own.includes(a.id),on=PF.eq[sl]===a.id;return `<div class="shopi${on?" cur":""}"><i>${a.ic}</i><small>${a.n}</small>${on?`<button class="qa" data-off="${sl}">卸下</button>`:own?`<button class="qa" data-wear="${a.id}">穿上</button>`:`<button class="qa${cn>=a.p?" claim":""}" data-bacc="${a.id}"${cn>=a.p?"":" disabled"}>💰 ${a.p}</button>`}</div>`}).join("")}</div>`})}
  else if(STAB==="ava")h+=`<div class="shopg">${AVS.map(([a,p])=>{const own=PF.own.includes(a),cur=PF.av===a;return`<div class="shopi${cur?" cur":""}"><i>${AV(a)}</i>${cur?`<button class="qa" disabled>使用中</button>`:own?`<button class="qa" data-use="${a}">使用</button>`:`<button class="qa${cn>=p?" claim":""}" data-buy="${a}"${cn>=p?"":" disabled"}>💰 ${p}</button>`}</div>`}).join("")}</div>`;
@@ -4214,15 +4216,16 @@ const _clsRowsFB=clsRows;clsRows=function(){const loc=_clsRowsFB();if(!FB())retu
 // 3) 🛠 進階設定（老師）：Firebase、魔法節奏屋網址、重看教學、清除這台平板的教學紀錄
 function advRender(){const s=mkSheet("adv","🛠 進階設定"),c=s.querySelector(".sc");let fb={};try{fb=JSON.parse(localStorage.getItem("rgFB")||"{}")||{}}catch(e){}
  c.innerHTML=`<div class="advbox"><h3>🎬 使用教學</h3><p>第一次打開遊戲會自動播放。想再看一次，或要示範給學生看，按這裡：</p><div class="opts" style="justify-content:flex-start"><button class="qa claim" data-adv="tourT">👩‍🏫 播放老師版教學</button><button class="qa" data-adv="tourS">🧒 播放學生版教學</button></div></div>
- <div class="advbox"><h3>🌐 全校排行榜／兌換券雲端登記（選用）</h3><p>不設定也可以正常使用，資料會存在這台平板（或用「☁️ 雲端同步」在多台平板間同步）。<br>如果學校有自己的 Firebase（Cloud Firestore）專案，填入後：榮耀殿堂會顯示所有平板的班級排名，集滿 50 隻精靈的「兌換券」也會在雲端登記、由老師核對。</p>
+ <div class="advbox"><h3>🌐 全校排行榜／樂透雲端登記（選用）</h3><p>不設定也可以正常使用，資料會存在這台平板（或用「☁️ 雲端同步」在多台平板間同步）。<br>如果學校有自己的 Firebase（Cloud Firestore）專案，填入後：榮耀殿堂會顯示所有平板的班級排名，集滿 50 隻精靈的「樂透」也會在雲端登記、由老師核對。</p>
   <div class="advrow"><label>Project ID<input id="advpid" value="${esc(fb.projectId||"")}" placeholder="例如 my-school-recorder" autocomplete="off"></label><label>Web API Key<input id="advkey" value="${esc(fb.apiKey||"")}" placeholder="AIza 開頭的一串" autocomplete="off"></label></div>
   <p class="advnote">目前狀態：${FB()?"✅ 已啟用（"+esc(FBCFG.projectId)+"）":"未啟用（只存在這台平板）"}</p>
   <div class="opts" style="justify-content:flex-start"><button class="qa claim" data-adv="fbsave">💾 儲存並重新載入</button>${fb.projectId?`<button class="qa" data-adv="fbclear">停用</button>`:""}</div></div>
+ <div class="advbox"><h3>🏘️ 小隊輪流 → 班級小鎮</h3><p>小隊輪流結束時，自動把名次分數加到班級小鎮「正在上課的班級」：第一名 +3、第二名 +2、第三名 +1，同分的小隊加一樣的分數。紅隊＝第 1 組、黃隊＝第 2 組、綠隊＝第 3 組。<br>班級小鎮要和這個遊戲在同一台電腦、同一個瀏覽器打開。</p><label style="font-weight:900;font-size:18px"><input type="checkbox" id="advct"${ctOn()?" checked":""}> 自動送分到班級小鎮</label></div>
  <div class="advbox"><h3>🔮 魔法節奏屋</h3><p>大廳左上的「魔法節奏屋」會在遊戲裡開啟另一個節奏小遊戲（需要網路）：<br><code>${esc(NGURL)}</code></p></div>`;
- c.onclick=e=>{const b=e.target.closest("[data-adv]");if(!b)return;const k=b.dataset.adv;
+ c.onchange=e=>{if(e.target.id==="advct"){try{localStorage.setItem("rgCTSend",e.target.checked?"1":"0")}catch(x){}toast(e.target.checked?"🏘️ 會自動送分到班級小鎮":"已關閉自動送分")}};c.onclick=e=>{const b=e.target.closest("[data-adv]");if(!b)return;const k=b.dataset.adv;
   if(k==="tourT"||k==="tourS"){s.hidden=true;startTour(null,k==="tourT"?"t":"s");return}
   if(k==="fbsave"){const p=$("advpid").value.trim(),a=$("advkey").value.trim();if(!p||!a){toast("請填入 Project ID 和 API Key");return}try{localStorage.setItem("rgFB",JSON.stringify({projectId:p,apiKey:a}))}catch(x){}toast("💾 已儲存，重新載入中…");setTimeout(()=>location.reload(),700);return}
-  if(k==="fbclear"){if(!confirm("停用全校排行榜／兌換券雲端登記？（雲端上的資料不會被刪除）"))return;try{localStorage.removeItem("rgFB")}catch(x){}setTimeout(()=>location.reload(),300)}};
+  if(k==="fbclear"){if(!confirm("停用全校排行榜／樂透雲端登記？（雲端上的資料不會被刪除）"))return;try{localStorage.removeItem("rgFB")}catch(x){}setTimeout(()=>location.reload(),300)}};
  return s}
 const _actAdv=act;act=function(a){if(a==="tour"){startTour(null);return}if(a==="adv"){const go=()=>{advRender();openSheet("adv")};(window.tIsOn&&tIsOn())?go():window.tAsk?tAsk(go):go();return}return _actAdv(a)};
 const _abAdv=window.__afterBuild;window.__afterBuild=()=>{_abAdv&&_abAdv();const hr=$("hubr");if(hr&&!hr.querySelector('[data-a="tour"]')){hr.insertAdjacentHTML("afterbegin",ib("tour","🎬","使用教學"));hr.insertAdjacentHTML("beforeend",ib("adv","🛠","進階設定"))}};
@@ -4242,7 +4245,7 @@ const TSTEPS={
   {h:"📜 任務牆",b:"老師可以替<b>每個年級</b>設定不同的任務曲目和需要的星星數。學生一進遊戲會先選年級，就會看到自己年級的任務。",t:'#hubb [data-a="q"]'},
   {h:"🗺️ 音樂冒險地圖",b:"任務曲目會變成地圖上的城堡，拿到指定星數就能攻下。地圖<b>預設鎖住</b>，老師到「⚙️ 設定 → 開放地圖」打開。",t:'#hubb [data-a="map"]'},
   {h:"🏆 榮耀殿堂",b:"<b>班級榮耀</b>：各班段位積分排行；<b>個人榮耀</b>：用命運籤筒抽座號，上台挑戰「排位戰」，每首曲子都有排行榜。",t:'#hubb [data-a="rank"]'},
-  {h:"🛒 商店",b:"用練習賺來的金幣<b>扭蛋</b>，收集 50 隻精靈，集滿可以換兌換券。抽到的精靈可以當成自己的頭像。",t:'#hubb [data-a="shop"]'},
+  {h:"🛒 商店",b:"用練習賺來的金幣<b>扭蛋</b>，收集 50 隻精靈，集滿可以換 1 張樂透。抽到的精靈可以當成自己的頭像。",t:'#hubb [data-a="shop"]'},
   {h:"🔮 魔法節奏屋",b:"另一個節奏小遊戲，需要網路。適合下課前幾分鐘全班一起玩。",t:'#hubb [data-a="ng"]'},
   {h:"大廳上方",b:"可以看到目前的<b>班級</b>、金幣、星星。每節課開始前，先按「🎤 開啟麥克風」，平板會問是否允許使用麥克風，請按「允許」。",t:"#hubtop .res"},
   {h:"⚙️ 設定",b:"老師密碼、證書上的老師名字、年級、開放地圖、☁️ 多台平板雲端同步、🛠 進階設定，都在這裡。想再看這段教學，也在這裡按「🎬 使用教學」。",t:'#hubb [data-a="hset"]'},
@@ -4306,7 +4309,7 @@ const HELP=[["🎮","怎麼玩",`<ol><li>到大廳上方按「🎤 開啟麥克�
  ["🎵","旋律練功房",`<ul><li>曲目依年級放在一本本書裡。「🎵 歌曲練習」是完整曲子，「✂️ 分段練習」是一行一行的小段落，先練分段再挑戰整首。</li><li><b>小隊輪流</b>：全班分組，各隊輪流上場累積分數。</li><li><b>排位戰</b>：同學輪流上場，挑戰每首曲子的排行榜。</li><li>過關後可以按「🏅 領取證書」，下載或用 A4 列印。</li></ul>`],
  ["🗺️","任務與冒險地圖",`<ul><li>任務牆上的曲子，就是冒險地圖上的城堡。</li><li>吹到老師指定的星星數，就能<b>攻下城堡</b>，拿到金幣和經驗值。</li><li>地圖要等老師開放後才能進去。</li></ul>`],
  ["🏆","段位與榮耀殿堂",`<p>段位積分這樣算：</p><ul><li>每 1 顆星 <b>+10</b></li><li>攻下 1 座城堡 <b>+40</b></li><li>每過關 1 次 <b>+3</b></li></ul><p>「班級榮耀」比各班的段位，「個人榮耀」看排位戰的成績和各曲排行榜。</p>`],
- ["🛒","商店：扭蛋收集精靈",`<ul><li>扭 1 次 💰120，十連扭 💰1080（至少 1 隻稀有以上）。</li><li>共有 50 隻精靈，分成普通、稀有、超稀有、傳說、神話。重複的精靈不會退金幣。</li><li>在「🧚 我的精靈」點一隻精靈，就能當成自己的頭像。</li><li>集滿 50 隻可以換一張「魔法藥水兌換券」，拿給老師核對。</li></ul>`],
+ ["🛒","商店：扭蛋收集精靈",`<ul><li>扭 1 次 💰120，十連扭 💰1080（至少 1 隻稀有以上）。</li><li>共有 50 隻精靈，分成普通、稀有、超稀有、傳說、神話。重複的精靈不會退金幣。</li><li>在「🧚 我的精靈」點一隻精靈，就能當成自己的頭像。</li><li>集滿 50 隻可以換一張「樂透」，拿給老師核對。</li></ul>`],
  ["🎤","吹不出分數？看這裡",`<ul><li>確認大廳上方顯示「🎤 麥克風已開啟」。開始前的畫面會顯示偵測到的音，可以先試吹。</li><li>在安靜的地方、一個人吹，把喇叭音量調小或戴耳機，避免伴奏被麥克風收進去。</li><li>氣要穩、舌頭輕輕 tu，手指把孔蓋緊，不要漏氣。</li><li>太難的話，可以把速度調慢，或請老師到「⚙️ 設定」裡的設定把靈敏度調高。</li></ul>`],
  ["👩‍🏫","給老師",`<ul><li>第一次使用請先按「🔒 老師」設定老師密碼。之後改曲目、上傳樂譜、開放地圖、雲端同步、兌換核對，都要輸入密碼。</li><li>「🏫 我的班級」可以新增班級，各班的金幣、星星、進度分開計算。</li><li>「🏅 證書設定」可以填寫各年級證書上的老師名字。</li><li>「☁️ 雲端同步」可以讓多台平板共用曲目和各班進度（需要 GitHub 帳號）。</li><li>想看完整導覽，按「🎬 使用教學」。</li></ul>`]];
 function helpRender(){const s=mkSheet("help","📘 遊戲說明"),c=s.querySelector(".sc");
@@ -4322,6 +4325,23 @@ const _accForV=accFor;accFor=function(name){const V=ACCV[name];if(!V)return _acc
  const ib=(V.intro||[]).reduce((a,[r])=>a+accLenV(r),0);let p=-ib;(V.intro||[]).forEach(([r,l])=>{const e=accBar(r,1,p,out);accBar(l,0,p,out);p=e});
  let b=0;V.bars.forEach(([r,l])=>{const e=accBar(r,1,b,out);accBar(l,0,b,out);b=e});out.sort((x,y)=>x.b-y.b);return{ev:out,introB:ib}};
 {const _ahV=window.accHas;window.accHas=n=>!!ACCV[n]||(_ahV?_ahV(n):false)}
+// 7) 🏘️ 小隊輪流結束 → 自動把名次分數送到「班級小鎮」（正在上課的班級）
+// 第一名 +3、第二名 +2、第三名 +1；同分＝同名次＝同樣的分數。紅隊＝第 1 組、黃隊＝第 2 組、綠隊＝第 3 組。
+// 兩個網站都在 gogo3747p.github.io 底下，同一台電腦的瀏覽器共用資料，班級小鎮開著就會立刻收到。
+const CTK="classtown_inbox",CTP=[3,2,1],ctOn=()=>{try{return localStorage.getItem("rgCTSend")!=="0"}catch(e){return true}};
+function ctSend(){if(!TM||TM.ctSent||!ctOn())return;TM.ctSent=1;
+ const vs=[...new Set(TM.sc)].sort((a,b)=>b-a),adds={},rows=[],skip=[];
+ TM.sc.forEach((v,i)=>{const r=vs.indexOf(v)+1;if(r>3||v<=0)return;const g=tid(i)+1,p=CTP[r-1];if(g>3){skip.push(tnm(i));return}adds[g]=(adds[g]||0)+p;rows.push([r,`第 ${r} 名 ${tnm(i)} → 第 ${g} 組 <b>+${p}</b>`])});rows.sort((x,y)=>x[0]-y[0]);
+ const box=document.createElement("div");box.className="ctbox";
+ if(!rows.length){box.innerHTML=`<b>🏘️ 班級小鎮</b><p>這場沒有可以加分的小隊${skip.length?"（班級小鎮只有第 1～3 組）":""}。</p>`}
+ else{const it={id:"rg"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),src:"直笛守護者・小隊輪流",adds};
+  let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||"[]");if(!Array.isArray(L))L=[]}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L))}catch(e){}
+  box.innerHTML=`<b>🏘️ 已送到班級小鎮（正在上課的班級）</b><p>${rows.map(x=>x[1]).join("<br>")}</p>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join("、")}沒有加分。</small>`:""}<small>班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。</small><button class="qa" data-ctundo="${it.id}">↩ 這場不要加分</button>`;
+  box.querySelector("[data-ctundo]").onclick=e=>{const id=e.target.dataset.ctundo;let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||"[]")}catch(x){}
+   if(Array.isArray(L)&&L.some(x=>x&&x.id===id)){try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==id)))}catch(x){}box.innerHTML="<b>🏘️ 已取消，這場不會加分</b>"}
+   else box.innerHTML="<b>🏘️ 班級小鎮已經收到了</b><p>請到班級小鎮按「↩ 復原」取消。</p>"}}
+ const t=DB.querySelector(".tm .opts");t?t.before(box):DB.appendChild(box)}
+const _tFinCT=tFinal;tFinal=function(){const r=_tFinCT.apply(this,arguments);try{if(TM&&!TM.mg&&!TM.duel)ctSend()}catch(e){}return r};
 // ==================== 合併版新增：結束 ====================
 
 build();window.__afterBuild&&__afterBuild();(()=>{const M=$("menu"),sp=$("splash");let done=0;const go=()=>{if(done)return;done=1;M.classList.add("ready");if(sp){sp.classList.add("gone");setTimeout(()=>sp.remove(),500)}};const im=document.querySelector("#hubbg img:not(.bk)");if(im&&!im.complete){im.addEventListener("load",go);im.addEventListener("error",go)}else if(im&&im.decode){im.decode().then(go,go)}else go();setTimeout(go,4000)})();fgSet((()=>{try{return localStorage.getItem("rgFpos")||"b"}catch(e){return "b"}})());hubRefresh();try{if(CLS.list.length>1&&!sessionStorage.getItem("rgPicked"))openSheet("cls")}catch(e){}setInterval(()=>{if(!M.hidden){const m=$("rmic");m&&(m.textContent=micOn?"🎤 麥克風已開啟":"🎤 開啟麥克風",m.classList.toggle("on",!!micOn));roll()}},1500);
