@@ -129,7 +129,11 @@
   .swb{width:36px;height:36px;border-radius:50%;border:3px solid #ffffff44;cursor:pointer;padding:0;color:#fff;font-family:inherit;font-size:15px;text-shadow:0 1px 2px #0009}
   .swb.on{border-color:#fff;box-shadow:0 0 0 3px #ffffff55}
   .vsx{align-self:center;font-weight:900;font-size:24px;color:#ffd23f}
-  .tdot{display:inline-block;width:16px;height:16px;border-radius:50%;margin:0 6px;vertical-align:-1px;border:2px solid #fff}
+  .teams.many .team{flex:1 1 170px;max-width:240px}.teams.many .team input{font-size:18px}
+.vsGrid.many{flex-wrap:wrap;justify-content:center;gap:10px!important}.vsGrid.many .vsCol{flex:1 1 150px;max-width:220px;padding:12px 10px}.vsGrid.many .vsCrown{font-size:26px;font-weight:900}.vsGrid.many .vsScore{font-size:clamp(28px,4vw,44px)}
+.tsBoard{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;font-size:17px}.tsBoard span{background:#0004;border-radius:999px;padding:3px 12px}.tsBoard .tdot{margin:0 6px 0 0}
+.ctSent{background:#22c55e22;border:3px solid #22c55e;border-radius:16px;padding:10px 14px;line-height:1.7;font-size:18px}.ctSent small{display:block;opacity:.85;font-size:14px}.ctSent button{margin-top:6px}
+.tdot{display:inline-block;width:16px;height:16px;border-radius:50%;margin:0 6px;vertical-align:-1px;border:2px solid #fff}
   .vsGrid{display:flex;gap:10px;align-items:stretch}
   .vsCol{flex:1;background:#0004;border:3px solid var(--tc);border-radius:18px;padding:12px;text-align:center;position:relative}
   .vsCol.win{box-shadow:0 0 0 4px #ffd23f88,0 0 30px #ffd23f55;background:#ffd23f14}
@@ -318,19 +322,22 @@
         </div>
         <div id="teamSetup" class="hidden">
           <div class="help" id="modeHelp" style="margin:-2px 0 8px"></div>
-          <div class="teams">
-            <div class="team" id="team0"><input type="text" maxlength="8" aria-label="第一隊名稱"><div class="sw"></div></div>
-            <div class="vsx">VS</div>
-            <div class="team" id="team1"><input type="text" maxlength="8" aria-label="第二隊名稱"><div class="sw"></div></div>
+          <div class="row" id="tcRow" style="margin:0 0 10px"><label class="t">組數</label>
+            <div class="seg" id="tcSeg"><button data-v="2">2 組</button><button data-v="3">3 組</button><button data-v="4">4 組</button><button data-v="5">5 組</button></div>
           </div>
-          <div class="row" style="margin-top:12px"><label class="t">🏫 班級網站</label>
+          <div class="teams" id="teamsBox"></div>
+          <div class="row" style="margin-top:12px"><label class="t">🏘️ 班級小鎮</label>
+            <label class="tog"><input type="checkbox" id="ctSendOn">對戰結束自動送分</label>
+          </div>
+          <div class="help">對戰結束後，自動把前三名送到「班級小鎮」正在上課的班級：<b>第一名 +3、第二名 +2、第三名 +1</b>，同分的組加一樣的分數（0 分不加）。第一組＝紅、第二組＝黃、第三組＝綠；班級小鎮只有 3 組，第四組以後不會加分。班級小鎮要在同一台電腦、同一個瀏覽器打開。</div>
+          <div hidden>          <div class="row" style="margin-top:12px"><label class="t">🏫 班級網站</label>
             <input type="text" id="cogSite" placeholder="https://weimusic.github.io/classroom-/" style="flex:1;min-width:200px">
           </div>
           <div class="help">對戰結束後，可以一鍵把勝利小組 <b>+3 分</b>送到「班級秩序能量站」的本節分數。兩個檔案放在同一個資料夾、用同一個瀏覽器打開；這裡填班級網站的檔名；如果放在網路上（例如 GitHub），請貼上班級網站的<b>完整網址</b>。</div>
           <div class="row" style="margin-top:10px"><label class="t">🔒 加分權限</label>
             <label class="tog"><input type="checkbox" id="awLock">加分前需要老師密碼</label>
           </div>
-          <div class="help" id="awLockHelp"></div>
+          <div class="help" id="awLockHelp"></div></div>
         </div>
         <div class="row"><label class="t">難度</label>
           <div class="seg" id="diffSeg">
@@ -939,8 +946,11 @@ let MODE=store.get('bubble_mode','solo');
 const TEAM_COLORS=[['紅','#ff4d5a','第一組','1'],['黃','#ffc83d','第二組','2'],['綠','#2fcf6f','第三組','3'],['藍','#3b8cff','第四組','4'],['紫','#a259ff','第五組','5'],['黑','#5b6270','其他','其']];
 const teamName=c=>(TEAM_COLORS.find(t=>t[1]===c)||TEAM_COLORS[5])[2];
 let TEAMS=store.get('bubble_teams',null);
-if(!TEAMS||!TEAMS.v2){TEAMS=[{name:'第一組',color:'#ff4d5a'},{name:'第二組',color:'#ffc83d'}];TEAMS.v2=1;}
-TEAMS=[TEAMS[0],TEAMS[1]];TEAMS.v2=1;
+/* 輪流對戰最多 5 組（同時對戰固定 2 組） */
+const TMAX=5,TDEF=i=>({name:TEAM_COLORS[i][2],color:TEAM_COLORS[i][1]});
+{const o=(TEAMS&&TEAMS.v2)?TEAMS:{};TEAMS=[];for(let i=0;i<TMAX;i++)TEAMS.push(o[i]&&o[i].color?o[i]:TDEF(i));TEAMS.v2=1;}
+let TCOUNT=Math.min(TMAX,Math.max(2,+store.get('bubble_tcount',2)||2));
+const nTeams=()=>MODE==='turns'?TCOUNT:2;
 let TURN_RESULTS=[];
 
 function newPlayer(idx,team,notes){
@@ -975,7 +985,7 @@ function startGame(turn=0){
   else if(mode==='turns')players=[newPlayer(0,TEAMS[turn],notes)];
   else players=[newPlayer(0,null,notes)];
   if(turn===0)TURN_RESULTS=[];
-  G={song:s,notes,spb,tempo,D,startAt,lead,cu,pb,endT:t,color:$('optColor').checked,guide,mode,turn,players,
+  G={song:s,notes,spb,tempo,D,startAt,lead,cu,pb,endT:t,color:$('optColor').checked,guide,mode,turn,players,nT:mode==='turns'?TCOUNT:2,
      strip:STRIP_POS,useLife:$('optLife').checked,glow:$('optGlow').checked,
      maxN:Math.max(9,...notes.map(n=>n.n)),minGap:Math.max(.15,Math.min(9,...notes.slice(1).map((n,i)=>n.t-notes[i].t))),
      running:true,paused:false};
@@ -1312,8 +1322,8 @@ function endGame(){
   if(G.mode==='versus'){showVs(G.players.map(statsOf));return;}
   if(G.mode==='turns'){
     TURN_RESULTS[G.turn]=statsOf(G.players[0]);
-    if(G.turn===0){showTurnScreen();return;}
-    showVs(TURN_RESULTS);return;
+    if(G.turn<G.nT-1){showTurnScreen(G.turn);return;}
+    showVs(TURN_RESULTS.slice(0,G.nT));return;
   }
   const P=G.players[0];
   if(P.failed)gameOver(P);else finish(P);
@@ -1323,14 +1333,22 @@ const AW_POINTS=3,AWQ='cog_award_queue';
 const COG_DEFAULT='https://weimusic.github.io/classroom-/';
 function cogSite(){let v=(store.get('cog_site',COG_DEFAULT)||'').trim();if(!v||v==='班級秩序能量站.html'){v=COG_DEFAULT;store.set('cog_site',v);}return v;}
 function groupOfColor(c){const i=TEAM_COLORS.findIndex(t=>t[1]===c);return i>=0&&i<5?i+1:0;}
-function renderAward(rs,win){
-  const box=$('vsAward');box.classList.remove('hidden');box.dataset.sent='';
-  const gs=(win>=0?[rs[win]]:rs).map(r=>groupOfColor(r.color));
-  if(gs.some(g=>!g)){box.innerHTML='<div class="awNote">「其他」組沒有對應班級網站的小組，請到班級網站手動加分。</div>';return;}
-  const label=win>=0?`🏫 第 ${gs[0]} 組 +${AW_POINTS} 分，回班級`:`🏫 平手！兩組各 +${AW_POINTS} 分，回班級`;
-  box.innerHTML=`<button class="btn big awBtn" id="awBtn">${label}</button><div class="awNote" id="awMsg"></div>`;
-  AW_LAST={gs,name:win>=0?rs[win].name:''};
-  $('awBtn').onclick=()=>checkPin('老師確認加分',()=>sendAward(gs,AW_LAST.name));
+// ===== 對戰結束 → 班級小鎮（照直笛守護者：前三名 +3/+2/+1，同分同分數）=====
+const CTK='classtown_inbox',CTP=[3,2,1],ctOn=()=>{try{return localStorage.getItem('rgCTSend')!=='0';}catch(e){return true;}};
+function renderAward(rs,win,tops){
+  const box=$('vsAward');box.classList.remove('hidden');
+  if(!ctOn()){box.innerHTML='<div class="awNote">自動送分到班級小鎮已關閉（在遊戲設定裡可以打開）。</div>';return;}
+  const vs=[...new Set(rs.map(r=>r.score))].sort((x,y)=>y-x),adds={},rows=[],skip=[];
+  rs.forEach(r=>{const k=vs.indexOf(r.score)+1;if(k>3||r.score<=0)return;const g=groupOfColor(r.color),p=CTP[k-1];
+    if(!g||g>3){skip.push(r.name);return;}adds[g]=(adds[g]||0)+p;rows.push([k,`第 ${k} 名 ${esc(r.name)} → 第 ${g} 組 <b>+${p}</b>`]);});
+  rows.sort((x,y)=>x[0]-y[0]);
+  if(!rows.length){box.innerHTML=`<div class="awNote">🏘️ 這場沒有可以送到班級小鎮的小組${skip.length?'（班級小鎮只有第 1～3 組）':''}。</div>`;return;}
+  const it={id:'nb'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),src:'唱名泡泡・'+(G.mode==='versus'?'同時對戰':'輪流對戰'),adds};
+  let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||'[]');if(!Array.isArray(L))L=[];}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L));}catch(e){}
+  box.innerHTML=`<div class="ctSent"><b>🏘️ 已送到班級小鎮（正在上課的班級）</b><div>${rows.map(x=>x[1]).join('<br>')}</div>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join('、')}沒有加分。</small>`:''}<small>班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。</small><button class="btn small ghost" id="ctUndo">↩ 這場不要加分</button></div>`;
+  $('ctUndo').onclick=()=>{let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||'[]');}catch(e){}
+    if(Array.isArray(L)&&L.some(x=>x&&x.id===it.id)){try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==it.id)));}catch(e){}box.innerHTML='<div class="awNote">🏘️ 已取消，這場不會加分。</div>';}
+    else box.innerHTML='<div class="awNote">🏘️ 班級小鎮已經收到了，請到班級小鎮按「↩ 復原」取消。</div>';};
 }
 let AW_LAST=null;
 // ===== 老師密碼（加分權限） =====
@@ -1422,22 +1440,26 @@ function sendAward(gs,winName,retry){
   msg.innerHTML=w?'已打開班級網站並加分！':`瀏覽器擋住了開新分頁，請直接打開班級網站，加分會自動加上。`;
 }
 function songLine(){return G.song.name+'　'+['🐣 簡單','🐥 普通','🦅 困難'][diff]+'　♩='+G.tempo;}
-function showTurnScreen(){
-  const r=TURN_RESULTS[0],nx=TEAMS[1];
+let NEXT_TURN=1;
+function showTurnScreen(turn){
+  turn=turn||0;NEXT_TURN=turn+1;const r=TURN_RESULTS[turn],nx=TEAMS[NEXT_TURN];
   $('tsDone').innerHTML=`<span class="tdot" style="background:${r.color}"></span>${esc(r.name)} 完成！`;
   $('tsScore').textContent=r.score;
   $('tsInfo').textContent=r.failed?`愛心用完，完成到第 ${r.done} / ${r.total} 個音`:`正確率 ${r.acc}%・最高連擊 ${r.maxCombo}`;
-  $('tsNext').innerHTML=`接下來換 <span class="tdot" style="background:${nx.color}"></span><b>${esc(nx.name)}</b> 上場！`;
+  $('tsNext').innerHTML=(G.nT>2?`<div class="tsBoard">${TURN_RESULTS.slice(0,NEXT_TURN).map(x=>`<span><i class="tdot" style="background:${x.color}"></i>${esc(x.name)} <b>${x.score}</b></span>`).join('')}</div><div style="opacity:.8;font-size:16px;margin-bottom:6px">第 ${NEXT_TURN+1} / ${G.nT} 組</div>`:'')+`接下來換 <span class="tdot" style="background:${nx.color}"></span><b>${esc(nx.name)}</b> 上場！`;
   $('tsGo').textContent=`▶ ${nx.name} 開始`;
   $('turnScreen').classList.remove('hidden');
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function showVs(rs){
   $('vsSong').textContent=songLine()+'　'+(G.mode==='versus'?'⚔️ 同時對戰':'🔁 輪流對戰');
-  const [a,b]=rs,win=a.score===b.score?-1:(a.score>b.score?0:1);
-  $('vsTitle').innerHTML=win<0?'🤝 平手！兩隊一樣厲害！':`🏆 <span style="color:${rs[win].color}">${esc(rs[win].name)}</span> 獲勝！`;
-  $('vsGrid').innerHTML=rs.map((r,i)=>`<div class="vsCol${i===win?' win':''}" style="--tc:${r.color}">
-    <div class="vsCrown">${i===win?'👑':win<0?'🤝':''}</div>
+  const top=Math.max(...rs.map(r=>r.score)),tops=rs.map((r,i)=>i).filter(i=>rs[i].score===top),win=tops.length===1?tops[0]:-1,many=rs.length>2;
+  const vs=[...new Set(rs.map(r=>r.score))].sort((x,y)=>y-x),rk=r=>vs.indexOf(r.score)+1;
+  $('vsTitle').innerHTML=win>=0?`🏆 <span style="color:${rs[win].color}">${esc(rs[win].name)}</span> 獲勝！`:(many&&tops.length<rs.length?`🤝 ${tops.map(i=>`<span style="color:${rs[i].color}">${esc(rs[i].name)}</span>`).join('、')} 並列第一！`:(many?'🤝 平手！大家一樣厲害！':'🤝 平手！兩隊一樣厲害！'));
+  $('vsGrid').classList.toggle('many',many);
+  const order=many?rs.map((r,i)=>i).sort((x,y)=>rs[y].score-rs[x].score||x-y):rs.map((r,i)=>i);
+  $('vsGrid').innerHTML=order.map(i=>[rs[i],i]).map(([r,i])=>`<div class="vsCol${tops.includes(i)&&(win>=0||many)?' win':''}" style="--tc:${r.color}">
+    <div class="vsCrown">${many?(['🥇','🥈','🥉'][rk(r)-1]||'第 '+rk(r)+' 名'):(i===win?'👑':win<0?'🤝':'')}</div>
     <div class="vsName">${esc(r.name)}</div>
     <div class="vsScore">${r.score}</div>
     ${r.failed?`<div class="vsFail">💔 愛心用完（${r.done}/${r.total}）</div>`:`<div class="vsStars">${'★'.repeat(stars(r.acc))}<span style="opacity:.3">${'★'.repeat(3-stars(r.acc))}</span></div>`}
@@ -1447,8 +1469,8 @@ function showVs(rs){
     <div class="vsRow" style="color:#8affb4"><span>Great</span><b>${r.cnt[1]}</b></div>
     <div class="vsRow" style="color:#8ad4ff"><span>Good</span><b>${r.cnt[2]}</b></div>
     <div class="vsRow" style="color:#ff8a8a"><span>Miss</span><b>${r.cnt[3]}</b></div>
-  </div>`).join('<div class="vsMid">VS</div>');
-  renderAward(rs,win);
+  </div>`).join(many?'':'<div class="vsMid">VS</div>');
+  if(top<=0){const box=$('vsAward');box.classList.remove('hidden');box.innerHTML='<div class="awNote">這場大家都沒有得分，沒有加分。</div>';}else renderAward(rs,win,tops);
   $('vsResult').classList.remove('hidden');
   if(win>=0){ensureAudio();[0,4,7,12].forEach((s,i)=>tone(7+[0,2,4,7][i],AC.currentTime+i*.12,.3,.25));}
 }
@@ -1551,21 +1573,25 @@ $('lbClear').onclick=()=>{
 };
 $('vsMenu').onclick=quitToMenu;
 $('vsAgain').onclick=()=>startGame(0);
-$('tsGo').onclick=()=>startGame(1);
+$('tsGo').onclick=()=>startGame(NEXT_TURN);
 $('tsQuit').onclick=quitToMenu;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&G&&G.running&&!G.paused)$('pauseBtn').onclick();});
 
 // ===== 模式與隊伍設定 =====
 const MODE_HELP={solo:'',
   versus:'畫面左右分成兩半，兩隊同時在同一台螢幕上點自己那一邊。需要能「多點觸控」的設備（觸控大螢幕、平板橫放效果最好）。',
-  turns:'兩隊輪流玩同一首歌，各玩一次後比分數。只能單點觸控的電子白板也可以用。'};
+  turns:'2～5 組輪流玩同一首歌，每組玩一次後比分數。只能單點觸控的電子白板也可以用。'};
 function renderMode(){
   $('modeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===MODE));
   $('teamSetup').classList.toggle('hidden',MODE==='solo');
   $('modeHelp').textContent=MODE_HELP[MODE];
-  [0,1].forEach(i=>{
+  $('tcRow').classList.toggle('hidden',MODE!=='turns');
+  $('tcSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.v===TCOUNT));
+  const N=nTeams(),tb=$('teamsBox');tb.classList.toggle('many',N>2);
+  tb.innerHTML=Array.from({length:N},(_,i)=>`<div class="team" id="team${i}"><input type="text" maxlength="8" aria-label="第${i+1}隊名稱"><div class="sw"></div></div>`).join(N===2?'<div class="vsx">VS</div>':'');
+  Array.from({length:N},(_,i)=>i).forEach(i=>{
     const box=$('team'+i);box.style.setProperty('--tc',TEAMS[i].color);
-    box.querySelector('input').value=TEAMS[i].name;
+    const inp=box.querySelector('input');inp.value=TEAMS[i].name;inp.oninput=e=>{TEAMS[i].name=e.target.value.trim()||teamName(TEAMS[i].color);saveTeams();};
     const sw=box.querySelector('.sw');sw.innerHTML='';
     for(const [nm,c,gn,lab] of TEAM_COLORS){const d=document.createElement('button');d.className='swb'+(TEAMS[i].color===c?' on':'');d.style.background=c;d.title=nm+'色＝'+gn;d.setAttribute('aria-label',nm+'色 '+gn);d.textContent=lab;
       d.onclick=()=>{TEAMS[i].color=c;TEAMS[i].name=gn;saveTeams();renderMode();};sw.appendChild(d);}
@@ -1573,11 +1599,11 @@ function renderMode(){
   const lbl={solo:'準備挑戰',versus:'⚔️ 同時對戰',turns:'🔁 輪流對戰'}[MODE];
   $('sbLabel').textContent=lbl;$('startBtn').textContent=MODE==='solo'?'▶ 開始':'⚔️ 開戰';
 }
-function saveTeams(){store.set('bubble_teams',{0:TEAMS[0],1:TEAMS[1],v2:1,length:2});}
+function saveTeams(){const o={v2:1,length:TMAX};TEAMS.forEach((t,i)=>o[i]=t);store.set('bubble_teams',o);store.set('bubble_tcount',TCOUNT);}
 $('modeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{MODE=b.dataset.v;store.set('bubble_mode',MODE);renderMode();});
-[0,1].forEach(i=>{$('team'+i).querySelector('input').oninput=e=>{TEAMS[i].name=e.target.value.trim()||teamName(TEAMS[i].color);saveTeams();};});
+$('tcSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{TCOUNT=+b.dataset.v;saveTeams();renderMode();});
 renderMode();
-renderLock();$('cogSite').value=cogSite();$('cogSite').oninput=e=>store.set('cog_site',e.target.value.trim());
+$('ctSendOn').checked=ctOn();$('ctSendOn').onchange=e=>{try{localStorage.setItem('rgCTSend',e.target.checked?'1':'0');}catch(x){}};renderLock();$('cogSite').value=cogSite();$('cogSite').oninput=e=>store.set('cog_site',e.target.value.trim());
 const TIMBRE_HELP={synth:'點對時發出像直笛的聲音。',voice:'點對時會用歌聲「唱」出唱名（Do、Re、Mi…），試聽和示範旋律也會用唱的。人聲是電腦合成的女聲。',both:'直笛音加上人聲唱名一起出現，旋律更清楚、也聽得到唱名。'};
 function renderTimbre(){$('timbreSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===TIMBRE));$('timbreHelp').textContent=TIMBRE_HELP[TIMBRE];}
 $('timbreSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{TIMBRE=b.dataset.v;store.set('timbre',TIMBRE);renderTimbre();ensureAudio();
