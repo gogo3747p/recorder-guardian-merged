@@ -4335,11 +4335,13 @@ function ctSend(){if(!TM||TM.ctSent||!ctOn())return;TM.ctSent=1;
  const box=document.createElement("div");box.className="ctbox";
  if(!rows.length){box.innerHTML=`<b>🏘️ 班級小鎮</b><p>這場沒有可以加分的小隊${skip.length?"（班級小鎮只有第 1～3 組）":""}。</p>`}
  else{const it={id:"rg"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),src:"直笛守護者・小隊輪流",adds};
-  let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||"[]");if(!Array.isArray(L))L=[]}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L))}catch(e){}
-  box.innerHTML=`<b>🏘️ 已送到班級小鎮（正在上課的班級）</b><p>${rows.map(x=>x[1]).join("<br>")}</p>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join("、")}沒有加分。</small>`:""}<small>班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。</small><button class="qa" data-ctundo="${it.id}">↩ 這場不要加分</button>`;
+  const local=()=>{let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||"[]");if(!Array.isArray(L))L=[]}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L))}catch(e){}};
+  const room=window.rgFBSend?rgFBSend(it,local):false;if(!room)local();
+  box.innerHTML=`<b>🏘️ 已送到班級小鎮（正在上課的班級）</b><p>${rows.map(x=>x[1]).join("<br>")}</p>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join("、")}沒有加分。</small>`:""}<small>${room?`透過 Firebase 送到班級小鎮房間「${esc(room)}」，任何一台打開的班級小鎮都會收到。`:"班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。"}</small><button class="qa" data-ctundo="${it.id}">↩ 這場不要加分</button>`;
   box.querySelector("[data-ctundo]").onclick=e=>{const id=e.target.dataset.ctundo;let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||"[]")}catch(x){}
-   if(Array.isArray(L)&&L.some(x=>x&&x.id===id)){try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==id)))}catch(x){}box.innerHTML="<b>🏘️ 已取消，這場不會加分</b>"}
-   else box.innerHTML="<b>🏘️ 班級小鎮已經收到了</b><p>請到班級小鎮按「↩ 復原」取消。</p>"}}
+   const had=Array.isArray(L)&&L.some(x=>x&&x.id===id);if(had)try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==id)))}catch(x){}
+   if(room){window.rgFBDel&&rgFBDel(id);box.innerHTML="<b>🏘️ 已取消</b><p>如果班級小鎮已經加上了，請到班級小鎮按「↩ 復原」。</p>"}
+   else box.innerHTML=had?"<b>🏘️ 已取消，這場不會加分</b>":"<b>🏘️ 班級小鎮已經收到了</b><p>請到班級小鎮按「↩ 復原」取消。</p>"}}
  const t=DB.querySelector(".tm .opts");t?t.before(box):DB.appendChild(box)}
 const _tFinCT=tFinal;tFinal=function(){const r=_tFinCT.apply(this,arguments);try{if(TM&&!TM.mg&&!TM.duel)ctSend()}catch(e){}return r};
 // ==================== 合併版新增：結束 ====================
@@ -4351,35 +4353,44 @@ build();window.__afterBuild&&__afterBuild();(()=>{const M=$("menu"),sp=$("splash
 <script>
 /* ---- ☁️ 雲端同步（GitHub Gist）：所有平板共用老師設定與各班進度 ---- */
 (()=>{
-const GK=["rgUser","rgFold","rgFolders","rgOrder","rgFcol","rgQuestCfg","rgCardCfg","rgSoloSel","rgLF","rgTeachers","rgClasses","rgTPw","rgMapOpen"];
+const GK=["bubble_bests","bubble_lb","bubble_customs","rgUser","rgFold","rgFolders","rgOrder","rgFcol","rgQuestCfg","rgCardCfg","rgSoloSel","rgLF","rgTeachers","rgClasses","rgTPw","rgMapOpen"];
 const PK=["rgProf","rgStat","rgDaily","rgSide","rgSign","rgCoins","rgStars","rgBest100","rgBest","rgBoard","rgMQ","rgCards","rgMapPos","rgPK"];
 const MK="rgSyncMeta",ls=window.localStorage,raw={set:Storage.prototype.setItem,rm:Storage.prototype.removeItem};
 let muted=false,busy=false,timer=0,state="",lastErr="";
 const gm=()=>{try{return JSON.parse(ls.getItem(MK))||{}}catch(e){return{}}};
-const blank=()=>({g:"",tok:"",cfgT:0,cls:{},dc:false,dk:{},at:0});
-let M0=Object.assign(blank(),gm());if(!M0.g||!M0.tok)M0=Object.assign(blank(),{});M0.cls=M0.cls||{};M0.dk=M0.dk||{};
-const on=()=>!!(M0.g&&M0.tok);
+const blank=()=>({g:"",tok:"",fb:"",room:"",ctr:"",cfgT:0,cls:{},dc:false,dk:{},at:0});
+let M0=Object.assign(blank(),gm());if(!(M0.g&&M0.tok)&&!(M0.fb&&M0.room))M0=Object.assign(blank(),{});M0.cls=M0.cls||{};M0.dk=M0.dk||{};
+const isFB=()=>!!(M0.fb&&M0.room),on=()=>!!(M0.g&&M0.tok)||isFB();
 const save=()=>{muted=true;try{raw.set.call(ls,MK,JSON.stringify(M0))}catch(e){}muted=false};
 const b64e=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 const b64d=s=>{s=String(s).replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return decodeURIComponent(escape(atob(s)))};
-const joinCode=()=>b64e(JSON.stringify({g:M0.g,t:M0.tok}));
+const joinCode=()=>b64e(JSON.stringify(isFB()?{f:M0.fb,r:M0.room,c:M0.ctr||""}:{g:M0.g,t:M0.tok}));
 const joinLink=()=>location.origin+location.pathname+"#rgsync="+joinCode();
-function parseJoin(v){v=String(v||"").trim();const m=/#rgsync=([A-Za-z0-9_\-]+)/.exec(v);if(m)v=m[1];try{const o=JSON.parse(b64d(v));if(o&&o.g&&o.t)return{g:String(o.g),t:String(o.t)}}catch(e){}return null}
+function parseJoin(v){v=String(v||"").trim();const m=/#rgsync=([A-Za-z0-9_\-]+)/.exec(v);if(m)v=m[1];try{const o=JSON.parse(b64d(v));if(o&&o.f&&o.r)return{g:{f:String(o.f),r:String(o.r),c:String(o.c||"")},t:""};if(o&&o.g&&o.t)return{g:String(o.g),t:String(o.t)}}catch(e){}return null}
 // ---- GitHub API ----
 const GH="https://api.github.com";
 const hdr=tok=>({"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"});
 function ghErr(r){const s=r.status;return new Error(s===401?"權杖不正確或已過期":s===403?"權杖沒有 Gists 權限，或使用次數暫時太多":s===404?"找不到雲端資料（可能被刪除，或權杖沒有權限）":s===422?"資料格式不正確":"連線錯誤 HTTP "+s)}
 const CF="rg-cfg.json",CLF=id=>"rg-cls-"+id+".json";
-async function get(g,tok){g=g||M0.g;tok=tok||M0.tok;const r=await fetch(GH+"/gists/"+encodeURIComponent(g),{headers:hdr(tok),cache:"no-store"});if(!r.ok)throw ghErr(r);const o=await r.json(),R={cfg:null,cls:{}};
+// ---- Firebase Realtime Database ----
+const FBOK=u=>/^https:\/\/[^\s\/]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/.test(String(u||"").trim());
+const FBU=(f,r,p)=>String(f).trim().replace(/\/+$/,"")+"/recorder/"+encodeURIComponent(r)+p+".json";
+const fsafe=s=>String(s).replace(/[.#$\[\]\/]/g,"_");
+function fbErr(r){const s=r.status;const e=new Error(s===401||s===403?"Firebase 拒絕讀寫（請到 Firebase 控制台 → Realtime Database →「規則」把 .read 和 .write 設成 true）":s===404?"找不到這個 Firebase 資料庫，請確認網址":"連線錯誤 HTTP "+s);e.status=s;return e}
+async function fbGet(f,r){const res=await fetch(FBU(f,r,"/files"),{cache:"no-store"});if(!res.ok)throw fbErr(res);const all=(await res.json())||{},R={cfg:null,cls:{}};
+ Object.entries(all).forEach(([k,v])=>{if(!v||typeof v.s!=="string")return;const o=J(v.s);if(!o||!o.d)return;if(k==="cfg")R.cfg=o;else if(v.id)R.cls[v.id]=o});return R}
+async function fbSend(files){const body={};Object.entries(files).forEach(([n,f])=>{if(n===CF)body.cfg={s:f.content};else{const id=n.replace(/^rg-cls-/,"").replace(/\.json$/,"");body["cls_"+fsafe(id)]={s:f.content,id}}});
+ const r=await fetch(FBU(M0.fb,M0.room,"/files"),{method:"PATCH",body:JSON.stringify(body)});if(!r.ok)throw fbErr(r)}
+async function get(g,tok){if(g&&typeof g==="object")return fbGet(g.f,g.r);if(!g&&isFB())return fbGet(M0.fb,M0.room);g=g||M0.g;tok=tok||M0.tok;const r=await fetch(GH+"/gists/"+encodeURIComponent(g),{headers:hdr(tok),cache:"no-store"});if(!r.ok)throw ghErr(r);const o=await r.json(),R={cfg:null,cls:{}};
  for(const [name,f] of Object.entries(o.files||{})){if(!/^rg-/.test(name))continue;let txt=f.content;if(f.truncated&&f.raw_url){const rr=await fetch(f.raw_url,{cache:"no-store"});if(rr.ok)txt=await rr.text()}const v=J(txt);if(!v||!v.d)continue;
   if(name===CF)R.cfg=v;else{const m=/^rg-cls-(.+)\.json$/.exec(name);if(m)R.cls[m[1]]=v}}return R}
-async function sendFiles(files){const r=await fetch(GH+"/gists/"+encodeURIComponent(M0.g),{method:"PATCH",headers:Object.assign({"Content-Type":"application/json"},hdr(M0.tok)),body:JSON.stringify({files})});if(!r.ok)throw ghErr(r)}
+async function sendFiles(files){if(isFB())return fbSend(files);const r=await fetch(GH+"/gists/"+encodeURIComponent(M0.g),{method:"PATCH",headers:Object.assign({"Content-Type":"application/json"},hdr(M0.tok)),body:JSON.stringify({files})});if(!r.ok)throw ghErr(r)}
 async function findGist(tok){try{for(let pg=1;pg<=3;pg++){const r=await fetch(GH+"/gists?per_page=100&page="+pg,{headers:hdr(tok),cache:"no-store"});if(!r.ok)return null;const L=await r.json();if(!Array.isArray(L)||!L.length)return null;const f=L.filter(x=>/直笛守護者 雲端同步資料/.test(x.description||"")||Object.keys(x.files||{}).some(n=>/^rg-(cfg|cls-)/.test(n))).sort((a,b)=>Date.parse(b.updated_at||0)-Date.parse(a.updated_at||0))[0];if(f)return f.id}}catch(e){}return null}
 async function createGist(tok){const r=await fetch(GH+"/gists",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},hdr(tok)),body:JSON.stringify({description:"直笛守護者 雲端同步資料（請勿刪除）",public:false,files:{"README.md":{content:"# 直笛守護者 雲端同步資料\n\n這個 Gist 由「直笛守護者」遊戲自動建立，用來在不同平板之間同步老師設定與各班進度。請不要刪除或修改。\n"}}})});if(!r.ok)throw ghErr(r);return(await r.json()).id}
 // ---- 本機資料 ----
 const CL=()=>{try{return JSON.parse(ls.getItem("rgClasses"))||{list:[]}}catch(e){return{list:[]}}};
 const bk=(id,k)=>"rgC:"+id+":"+k;
-function mark(k){if(muted||!on()||k===MK)return;let hit=false;if(GK.includes(k)){M0.dc=true;hit=true}else if(PK.includes(k)){const c=CL().cur;if(c){M0.dk[c]=true;hit=true}}else{const m=/^rgC:([^:]+):(.+)$/.exec(k);if(m&&PK.includes(m[2])){M0.dk[m[1]]=true;hit=true}}if(hit){save();clearTimeout(timer);timer=setTimeout(()=>push(),5000);dot()}}
+function mark(k){if(muted||!on()||k===MK)return;let hit=false;if(GK.includes(k)){M0.dc=true;hit=true}else if(PK.includes(k)){const c=CL().cur;if(c){M0.dk[c]=true;hit=true}}else{const m=/^rgC:([^:]+):(.+)$/.exec(k);if(m&&PK.includes(m[2])){M0.dk[m[1]]=true;hit=true}}if(hit){save();clearTimeout(timer);timer=setTimeout(()=>push(),isFB()?2000:5000);dot()}}
 Storage.prototype.setItem=function(k,v){raw.set.call(this,k,v);if(this===ls)mark(String(k))};
 Storage.prototype.removeItem=function(k){raw.rm.call(this,k);if(this===ls)mark(String(k))};
 const put=(k,v)=>{v==null?raw.rm.call(ls,k):raw.set.call(ls,k,v)};
@@ -4397,7 +4408,12 @@ function mergeCls(rem,loc,id){const o=Object.assign({},rem,nn(loc)),bs=id&&M0.ba
  const ba=J(rem.rgBoard),bb=J(loc.rgBoard);if(ba&&bb){const m=JSON.parse(JSON.stringify(ba));Object.entries(bb).forEach(([song,arr])=>{const A=m[song]||(m[song]=[]);(arr||[]).forEach(o=>{const e=A.find(x=>x.n===o.n);if(!e)A.push(o);else if(o.s>e.s){e.s=o.s;e.st=o.st;e.t=o.t}});A.sort((x,y)=>y.s-x.s||x.t-y.t);m[song]=A.slice(0,30)});o.rgBoard=JSON.stringify(m)}
  const pa=J(rem.rgProf),pb=J(loc.rgProf);if(pa&&pb){const re=+pa.exp||0,le=+pb.exp||0;pb.exp=bs?Math.max(0,re+le-bs.e):Math.max(re,le);o.rgProf=JSON.stringify(pb)}
  const ka=J(rem.rgPK),kb=J(loc.rgPK);if(ka&&kb){const lb=JSON.parse(JSON.stringify(ka.lb||{}));Object.entries(kb.lb||{}).forEach(([song,L])=>{const T=lb[song]||(lb[song]={});Object.entries(L).forEach(([n,v])=>{const w=T[n];if(!w||v.sc>w.sc||(v.sc===w.sc&&v.acc>w.acc))T[n]=v})});kb.lb=lb;o.rgPK=JSON.stringify(kb)}return o}
-function mergeCfg(rem,loc){const o=Object.assign({},rem,nn(loc)),a=J(rem.rgUser),b=J(loc.rgUser);if(a&&b)o.rgUser=JSON.stringify(Object.assign({},a,b));const ca=J(rem.rgClasses),cb=J(loc.rgClasses);if(ca&&cb&&Array.isArray(ca.list)&&Array.isArray(cb.list)){const ids=new Set(cb.list.map(c=>c.id));cb.list=cb.list.concat(ca.list.filter(c=>!ids.has(c.id)));o.rgClasses=JSON.stringify(cb)}return o}
+function mergeBubble(o,rem,loc){
+ {const a=J(rem.bubble_bests)||{},b=J(loc.bubble_bests)||{},m=Object.assign({},a);Object.keys(b).forEach(k=>{const x=a[k],y=b[k];m[k]=!x||(y&&(+y.score||0)>=(+x.score||0))?y:x});if(rem.bubble_bests!=null||loc.bubble_bests!=null)o.bubble_bests=JSON.stringify(m)}
+ {const a=J(rem.bubble_lb)||{},b=J(loc.bubble_lb)||{},m={};new Set([...Object.keys(a),...Object.keys(b)]).forEach(k=>{const seen=new Set(),L=[];[...(a[k]||[]),...(b[k]||[])].forEach(e=>{const id=e&&(e.ts+"|"+e.name);if(!e||seen.has(id))return;seen.add(id);L.push(e)});m[k]=L.sort((x,y)=>y.score-x.score||y.acc-x.acc).slice(0,50)});if(rem.bubble_lb!=null||loc.bubble_lb!=null)o.bubble_lb=JSON.stringify(m)}
+ {const a=J(rem.bubble_customs),b=J(loc.bubble_customs);if(Array.isArray(a)&&Array.isArray(b)){const ids=new Set(b.map(x=>x&&x.id));o.bubble_customs=JSON.stringify(b.concat(a.filter(x=>x&&!ids.has(x.id))))}}
+ return o}
+function mergeCfg(rem,loc){const o=Object.assign({},rem,nn(loc)),a=J(rem.rgUser),b=J(loc.rgUser);if(a&&b)o.rgUser=JSON.stringify(Object.assign({},a,b));const ca=J(rem.rgClasses),cb=J(loc.rgClasses);if(ca&&cb&&Array.isArray(ca.list)&&Array.isArray(cb.list)){const ids=new Set(cb.list.map(c=>c.id));cb.list=cb.list.concat(ca.list.filter(c=>!ids.has(c.id)));o.rgClasses=JSON.stringify(cb)}return mergeBubble(o,rem,loc)}
 const same=(a,b,keys)=>keys.every(k=>(a[k]??null)===(b[k]??null));
 const playing=()=>{const m=document.getElementById("menu");return!m||m.hidden||m.style.visibility==="hidden"};
 // ---- 下載：把別台平板的新資料寫進這台 ----
@@ -4432,23 +4448,41 @@ function qrHTML(){let q="";try{q=window.QRGen?window.QRGen(joinLink()):""}catch(
 function clsWarn(){const L=CL().list||[],cur=L.find(c=>c.id===CL().cur),dup=cur&&L.filter(c=>c.name===cur.name).length>1;
  return`<div class="qr" style="border-color:${dup?"#e53935":"#e2c98a"}"><div class="qi">🏫</div><div><div class="qt">這台裝置目前的班級：${esc(cur?cur.name:"—")}</div><div class="qd">${dup?`<b style="color:#c62828">有 ${L.filter(c=>c.name===cur.name).length} 個同名的「${esc(cur.name)}」！這通常是電腦和平板各自建立了一個預設班級，所以金幣分在兩個班裡。請到「🏫 我的班級」選有金幣的那一個，或把其中一個改名。</b>`:"其他裝置也要選這個班，金幣和星星才會一樣。"}</div></div></div>`}
 function draw(){const c=panel.querySelector(".sc");
- c.innerHTML=`<p class="sub" style="font-size:17px;line-height:1.7">連上同一個雲端的平板會共用：<br>📚 曲目、資料夾、城堡曲目、年級任務、魔法卡、班級名單<br>🏫 各班的等級、金幣、星星、任務進度<br><small>資料存在您 GitHub 帳號裡一個不公開的 Gist。主題、節拍器等「這台平板的顯示設定」不會同步。<br>⚠️ 進度是「依班級」同步的：每台裝置上方「🏫 我的班級」要選同一個班，才會看到一樣的金幣和星星。</small></p>
- ${clsWarn()}${on()?`<div class="qr done"><div class="qi">${state==="err"?"⚠️":"✅"}</div><div><div class="qt">已連上 GitHub 雲端</div><div class="qd">${state==="err"?`<span style="color:#c62828">暫時無法同步（${esc(lastErr)}）。資料會先存在這台平板，恢復後會自動補傳。</span>`:`上次同步：${tm(M0.at)}${waiting()?"　（有資料等待上傳）":""}`}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="qa claim" data-sy="now">🔄 立即同步</button><button class="qa" data-sy="qr">📱 連接其他平板</button><button class="qa" data-sy="off">中斷</button></div></div>${showQR?qrHTML():""}`
+ c.innerHTML=`<p class="sub" style="font-size:17px;line-height:1.7">連上同一個雲端的平板會共用：<br>📚 曲目、資料夾、城堡曲目、年級任務、魔法卡、班級名單<br>🫧 唱名泡泡的最佳成績、排行榜、自訂歌曲<br>🏫 各班的等級、金幣、星星、任務進度<br><small>${isFB()?"資料存在您的 Firebase 即時資料庫（房間："+esc(M0.room)+"）。":"資料存在您 GitHub 帳號裡一個不公開的 Gist。"}主題、節拍器等「這台平板的顯示設定」不會同步。<br>⚠️ 進度是「依班級」同步的：每台裝置上方「🏫 我的班級」要選同一個班，才會看到一樣的金幣和星星。</small></p>
+ ${clsWarn()}${on()?`<div class="qr done"><div class="qi">${state==="err"?"⚠️":"✅"}</div><div><div class="qt">${isFB()?"已連上 Firebase 雲端・房間 "+esc(M0.room):"已連上 GitHub 雲端"}</div><div class="qd">${state==="err"?`<span style="color:#c62828">暫時無法同步（${esc(lastErr)}）。資料會先存在這台平板，恢復後會自動補傳。</span>`:`上次同步：${tm(M0.at)}${waiting()?"　（有資料等待上傳）":""}`}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="qa claim" data-sy="now">🔄 立即同步</button><button class="qa" data-sy="qr">📱 連接其他平板</button><button class="qa" data-sy="off">中斷</button></div></div>${showQR?qrHTML():""}${isFB()?ctBox():""}`
  :`<div class="syset"><h3>🅰 已經有平板連上了？</h3><p>在那台平板按「📱 連接其他平板」，用這台的相機掃 QR code 就好。沒有相機的話，把連線碼貼在這裡：</p><div class="syrow"><input id="syjc" placeholder="貼上連線碼" autocomplete="off"><button class="qa claim" data-sy="join">連線</button></div></div>
- <div class="syset"><h3>🅱 第一次設定，或「中斷後沒有連線碼」時重新連線</h3><ol><li>電腦登入 GitHub，打開 <b>github.com/settings/personal-access-tokens/new</b>。</li><li>Token name 填「直笛守護者」，Expiration 選最長的期限。</li><li>往下找到 <b>Permissions</b> → <b>Account permissions</b> → <b>Gists</b>，選 <b>Read and write</b>。其他都不用改。</li><li>按最下面的 <b>Generate token</b>，複製 <code>github_pat_</code> 開頭的那串，貼到下面。</li></ol><p style="color:#2e7d32;font-weight:900">💡 之前已經建立過雲端？貼上權杖後會自動找回原本的雲端資料，不會重新建一個新的。</p><ol style="display:none"></ol><div class="syrow"><input id="sytok" type="password" placeholder="貼上 github_pat_… 權杖" autocomplete="off"><button class="qa claim" data-sy="make">建立雲端</button></div></div>`}
+ ${fbSetup()}<details class="syset"><summary><b>🅲 改用 GitHub Gist 同步（不用 Firebase 時）</b></summary><ol><li>電腦登入 GitHub，打開 <b>github.com/settings/personal-access-tokens/new</b>。</li><li>Token name 填「直笛守護者」，Expiration 選最長的期限。</li><li>往下找到 <b>Permissions</b> → <b>Account permissions</b> → <b>Gists</b>，選 <b>Read and write</b>。其他都不用改。</li><li>按最下面的 <b>Generate token</b>，複製 <code>github_pat_</code> 開頭的那串，貼到下面。</li></ol><p style="color:#2e7d32;font-weight:900">💡 之前已經建立過雲端？貼上權杖後會自動找回原本的雲端資料，不會重新建一個新的。</p><ol style="display:none"></ol><div class="syrow"><input id="sytok" type="password" placeholder="貼上 github_pat_… 權杖" autocomplete="off"><button class="qa claim" data-sy="make">建立雲端</button></div></details>`}
  <div id="syask"></div>`}
 function ask(h){const a=panel.querySelector("#syask");a&&(a.innerHTML=h)}
+// ---- Firebase 設定畫面 ----
+const CTS=()=>{try{return JSON.parse(ls.getItem("classtown_sync"))||{}}catch(e){return{}}};
+const sameDB=(a,b)=>String(a||"").trim().replace(/\/+$/,"")===String(b||"").trim().replace(/\/+$/,"");
+function ctGuess(f){const c=CTS();return c.u&&c.r&&sameDB(c.u,f)?String(c.r):""}
+function fbSetup(){const c=CTS(),u=c.u||"",rm="rg"+Math.random().toString(36).slice(2,7);
+ return`<div class="syset"><h3>🅱 用 Firebase 連動平板（建議）</h3><p>填入 Firebase 即時資料庫（Realtime Database）的網址，再取一個「房間代碼」。其他平板只要掃 QR code，或填一樣的網址和房間代碼，就會共用同一份資料，任何一台修改，其他台幾秒內就會更新。${u?"<br>✅ 已經自動帶入「班級小鎮」用的資料庫網址。":""}</p>
+ <div class="syrow"><input id="syfb" placeholder="https://你的專案-default-rtdb.firebaseio.com" value="${esc(u)}" autocomplete="off"></div>
+ <div class="syrow"><input id="syroom" placeholder="房間代碼（英文、數字 4～40 個字）" value="${esc(rm)}" autocomplete="off"><button class="qa claim" data-sy="fbmake">開始同步</button></div>
+ <p style="font-size:14px;color:#6b5a30">💡 同一個資料庫可以放好幾個遊戲，房間代碼不同就不會互相影響。連不上時，請到 Firebase 控制台 → Realtime Database →「規則」，把 <code>.read</code> 和 <code>.write</code> 設成 <code>true</code> 後按「發布」。</p></div>`}
+function ctBox(){const c=CTS(),same=c.u&&sameDB(c.u,M0.fb);
+ return`<div class="syset"><h3>🏘️ 小隊輪流 → 班級小鎮（跨裝置送分）</h3><p>班級小鎮也連上<b>同一個 Firebase 資料庫</b>時，在任何一台平板玩完小隊輪流（或唱名泡泡對戰），前三名分數都會送到班級小鎮，不用在同一台電腦。<br>請填班級小鎮「☁️ 平板同步」畫面裡的<b>房間代碼</b>${same?"（已經自動帶入）":""}：</p>
+ <div class="syrow"><input id="syct" placeholder="班級小鎮的房間代碼，例如 ctab12c" value="${esc(M0.ctr||"")}" autocomplete="off"><button class="qa claim" data-sy="ctsave">儲存</button></div>
+ <p style="font-size:14px;color:#6b5a30">${M0.ctr?"✅ 目前會送到班級小鎮房間「"+esc(M0.ctr)+"」。":"目前沒有設定：只有在同一台電腦打開的班級小鎮才收得到分數。"}</p></div>`}
 const err=m=>`<p style="color:#c62828;text-align:center;font-weight:900">${esc(m)}</p>`;
 const tst=h=>{try{typeof toast==="function"&&toast(h)}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function join(g,tok){ask(`<p style="text-align:center">🔄 連線中…</p>`);let R;try{R=await get(g,tok)}catch(e){ask(err("無法連線："+e.message));return}
- M0=Object.assign(blank(),{g,tok});const has=R.cfg||Object.keys(R.cls).length;
+ M0=Object.assign(blank(),typeof g==="object"?{fb:g.f,room:g.r,ctr:g.c||ctGuess(g.f)}:{g,tok});const has=R.cfg||Object.keys(R.cls).length;
  if(!has){save();state="ok";await push(true);showQR=false;draw();tst("✅ 已連上雲端");return}
  pend=R;ask(`<div class="qr"><div class="qi">☁️</div><div><div class="qt">雲端上已經有資料</div><div class="qd">最後更新：${tm(Math.max(R.cfg?R.cfg.t:0,...Object.values(R.cls).map(x=>x.t)))}，共 ${R.cfg?(J(R.cfg.d.rgClasses)||{list:[]}).list.length:0} 個班級</div></div></div>
   <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px"><button class="qa claim" data-sy="down" style="font-size:19px">⬇ 使用雲端資料（建議）</button><button class="qa" data-sy="up" style="font-size:19px">⬆ 用這台的資料覆蓋雲端</button></div>`)}
 async function act(e){const b=e.target.closest("[data-sy]");if(!b)return;const k=b.dataset.sy,c=panel.querySelector(".sc");
  if(k==="now"){state="sync";draw();await push().catch(()=>{});await pull();draw();return}
  if(k==="qr"){showQR=!showQR;draw();return}
+ if(k==="fbmake"){const f=(c.querySelector("#syfb").value||"").trim().replace(/\/+$/,""),r=(c.querySelector("#syroom").value||"").trim();
+  if(!FBOK(f)){ask(err("資料庫網址不對：要用 https 開頭，結尾是 firebaseio.com 或 firebasedatabase.app"));return}
+  if(!/^[A-Za-z0-9_-]{4,40}$/.test(r)){ask(err("房間代碼請用 4～40 個英文、數字"));return}
+  join({f,r,c:ctGuess(f)},"");return}
+ if(k==="ctsave"){const v=(c.querySelector("#syct").value||"").trim();if(v&&!/^[A-Za-z0-9_-]{4,40}$/.test(v)){ask(err("房間代碼請用 4～40 個英文、數字"));return}M0.ctr=v;save();draw();tst(v?"🏘️ 會把分數送到班級小鎮房間 "+esc(v):"已取消跨裝置送分");return}
  if(k==="copy"){const ta=c.querySelector("#syjoin");try{await navigator.clipboard.writeText(ta.value);b.textContent="已複製 ✓"}catch(x){ta.select();b.textContent="請手動全選複製"}return}
  if(k==="off"){if(!confirm("讓這台平板中斷雲端同步？（雲端上的資料不會被刪除）"))return;M0=blank();save();state="";showQR=false;dot();draw();return}
  if(k==="join"){const o=parseJoin(c.querySelector("#syjc").value);if(!o){ask(err("連線碼不正確，請重新複製一次。"));return}join(o.g,o.t);return}
@@ -4466,13 +4500,17 @@ async function act(e){const b=e.target.closest("[data-sy]");if(!b)return;const k
  if(k==="up"){save();state="ok";await push(true);draw();return}}
 // 掃 QR code 開啟的連結：#rgsync=…
 function fromHash(){const m=/^#rgsync=([A-Za-z0-9_\-]+)/.exec(location.hash);if(!m)return;const o=parseJoin(m[1]);try{history.replaceState(null,"",location.pathname+location.search)}catch(e){location.hash=""}
- if(!o)return;const go=()=>{if(!document.getElementById("hubr")){setTimeout(go,300);return}addBtn();open();if(on()&&M0.g===o.g){ask(`<p style="text-align:center">這台平板已經連上同一個雲端了。</p>`);return}join(o.g,o.t)};go()}
+ if(!o)return;const go=()=>{if(!document.getElementById("hubr")){setTimeout(go,300);return}addBtn();open();if(on()&&(M0.g===o.g||(typeof o.g==="object"&&M0.fb===o.g.f&&M0.room===o.g.r))){ask(`<p style="text-align:center">這台平板已經連上同一個雲端了。</p>`);return}join(o.g,o.t)};go()}
 fromHash();window.addEventListener("hashchange",fromHash);
 // 開啟遊戲時下載、在大廳時每分鐘檢查一次
 if(on())setTimeout(()=>pull(true),300);
-setInterval(()=>{if(on()&&!playing()&&document.visibilityState==="visible")pull()},30000);
+let lastPull=0;setInterval(()=>{if(on()&&!playing()&&document.visibilityState==="visible"&&Date.now()-lastPull>(isFB()?10000:30000)){lastPull=Date.now();pull()}},2000);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&on()&&!playing())pull();if(document.visibilityState==="hidden"&&on())push()});
+window.addEventListener("storage",e=>{if(e.key&&/^bubble_(bests|lb|customs)$/.test(e.key))mark(e.key)});
 window.rgSync={pull,push,meta:()=>M0};
+const ctURL=id=>String(M0.fb).trim().replace(/\/+$/,"")+"/classtown/"+encodeURIComponent(M0.ctr)+"/inbox/"+encodeURIComponent(id)+".json";
+window.rgFBSend=(it,fail)=>{if(!isFB()||!M0.ctr||!it||!it.id)return false;fetch(ctURL(it.id),{method:"PUT",body:JSON.stringify(it)}).then(r=>{if(!r.ok)throw 0}).catch(()=>{fail&&fail()});return M0.ctr};
+window.rgFBDel=id=>{if(!isFB()||!M0.ctr)return;fetch(ctURL(id),{method:"DELETE"}).catch(()=>{})};
 })();
 </script>
 <style>

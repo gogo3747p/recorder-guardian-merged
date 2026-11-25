@@ -1349,10 +1349,13 @@ function renderAward(rs,win,tops){
   rows.sort((x,y)=>x[0]-y[0]);
   if(!rows.length){box.innerHTML=`<div class="awNote">🏘️ 這場沒有可以送到班級小鎮的小組${skip.length?'（班級小鎮只有第 1～3 組）':''}。</div>`;return;}
   const it={id:'nb'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),src:'唱名泡泡・'+(G.mode==='versus'?'同時對戰':'輪流對戰'),adds};
-  let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||'[]');if(!Array.isArray(L))L=[];}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L));}catch(e){}
-  box.innerHTML=`<div class="ctSent"><b>🏘️ 已送到班級小鎮（正在上課的班級）</b><div>${rows.map(x=>x[1]).join('<br>')}</div>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join('、')}沒有加分。</small>`:''}<small>班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。</small><button class="btn small ghost" id="ctUndo">↩ 這場不要加分</button></div>`;
+  const local=()=>{let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||'[]');if(!Array.isArray(L))L=[];}catch(e){}L.push(it);try{localStorage.setItem(CTK,JSON.stringify(L));}catch(e){}};
+  let room=false;try{const P=window.parent;if(P&&P!==window&&P.rgFBSend)room=P.rgFBSend(it,local);}catch(e){}if(!room)local();
+  box.innerHTML=`<div class="ctSent"><b>🏘️ 已送到班級小鎮（正在上課的班級）</b><div>${rows.map(x=>x[1]).join('<br>')}</div>${skip.length?`<small>班級小鎮只有第 1～3 組，${skip.map(esc).join('、')}沒有加分。</small>`:''}<small>${room?`透過 Firebase 送到班級小鎮房間「${esc(room)}」，任何一台打開的班級小鎮都會收到。`:'班級小鎮要在這台電腦的瀏覽器開著（或下次打開時）才會加進去。'}</small><button class="btn small ghost" id="ctUndo">↩ 這場不要加分</button></div>`;
   $('ctUndo').onclick=()=>{let L=[];try{L=JSON.parse(localStorage.getItem(CTK)||'[]');}catch(e){}
-    if(Array.isArray(L)&&L.some(x=>x&&x.id===it.id)){try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==it.id)));}catch(e){}box.innerHTML='<div class="awNote">🏘️ 已取消，這場不會加分。</div>';}
+    const had=Array.isArray(L)&&L.some(x=>x&&x.id===it.id);if(had)try{localStorage.setItem(CTK,JSON.stringify(L.filter(x=>x&&x.id!==it.id)));}catch(e){}
+    if(room){try{window.parent.rgFBDel&&window.parent.rgFBDel(it.id);}catch(e){}box.innerHTML='<div class="awNote">🏘️ 已取消。如果班級小鎮已經加上了，請到班級小鎮按「↩ 復原」。</div>';}
+    else if(had)box.innerHTML='<div class="awNote">🏘️ 已取消，這場不會加分。</div>';
     else box.innerHTML='<div class="awNote">🏘️ 班級小鎮已經收到了，請到班級小鎮按「↩ 復原」取消。</div>';};
 }
 let AW_LAST=null;
