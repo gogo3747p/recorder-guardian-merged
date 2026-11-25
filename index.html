@@ -2504,7 +2504,7 @@ function pnTone(f,when,dur,vel){const o=ac.createOscillator(),o2=ac.createOscill
  o.connect(g);o2.connect(g2);o3.connect(g3);g2.connect(g);g3.connect(g);g.connect(lp);lp.connect(ac.destination);[o,o2,o3].forEach(n=>{n.start(when);n.stop(end+.05)})}
 function accSched(t){if(!G||!G.acc||!ACCON)return;const s=sec();while(G.ai<G.acc.length){const o=G.acc[G.ai],w=G.t0+(o.b+G.ci)*s;if(w>t+.25)break;if(w>=t-.05)o.k==="p"?pnTone(freq(o.n-12),Math.max(w,t),o.d*s*.95,.2):recTone(freq(o.n),Math.max(w,t),Math.max(.1,o.d*s*.92),o.k==="q"?.4:1);G.ai++}}
 function update(){const t=ac.currentTime,b=(t-LATf()-G.t0)/sec()-G.ci,pb=G.beat,N=G.notes.length,dt=Math.min(.1,Math.max(0,t-G.lt));G.lt=t;G.beat=b;accSched(t);
- const mt=+$("metro").value,bs=G.bs||1,per=bs===.5?6:bs>1?2:mt;if(mt){if(G.nb==null)G.nb=Math.ceil(b/bs-1e-6);while(G.nb*bs<G.total){const tt=G.t0+(G.nb*bs+G.ci)*sec();if(tt>t+.15)break;if(tt>=t-.03){const k=((G.nb%per)+per)%per;tick(per===6?k%3===0:k===0,tt)};G.nb++}}else G.nb=null;
+ const mt=+$("metro").value,bs=G.bs||1,per=bs===.5?6:bs>1?2:(mt||G.cntPer||4),cin=G.cnt&&b<Math.max(0,G.cnt.fb);if(mt||cin){if(G.nb==null)G.nb=Math.ceil(Math.max(b,-G.ci)/bs-1e-6);while(G.nb*bs<G.total&&(mt||G.nb*bs<Math.max(0,G.cnt.fb))){const tt=G.t0+(G.nb*bs+G.ci)*sec();if(tt>t+.15)break;if(tt>=t-.03){const k=(((G.nb+(G.cnt?Math.round(G.cnt.pad/bs):0))%per)+per)%per;tick(per===6?k%3===0:k===0,tt)};G.nb++}}else G.nb=null;
  $("count").textContent=b<0?(b<-G.ci?"":Math.ceil(-b/(G.cb||G.bs||1)-1e-9)):"";
  ACX=null;if(G.acc&&ACCON){const xs=[];for(const o of G.acc){if(o.b>b+.3)break;if(o.b-.05<=b&&b<o.b+o.d+.15&&o.k!=="p"&&o.n)xs.push(o.n)}if(xs.length){const ce=curNote(b)||G.notes.find(q=>q.b>=b);ACX=xs.filter(m=>!ce||Math.abs(m-ce.n)>=1)}}
   const m=detect();G.pk=Math.max(LV,G.pk*.94);if(LV<G.pk*.45)G.armed=true;
@@ -4344,6 +4344,32 @@ function ctSend(){if(!TM||TM.ctSent||!ctOn())return;TM.ctSent=1;
    else box.innerHTML=had?"<b>🏘️ 已取消，這場不會加分</b>":"<b>🏘️ 班級小鎮已經收到了</b><p>請到班級小鎮按「↩ 復原」取消。</p>"}}
  const t=DB.querySelector(".tm .opts");t?t.before(box):DB.appendChild(box)}
 const _tFinCT=tFinal;tFinal=function(){const r=_tFinCT.apply(this,arguments);try{if(TM&&!TM.mg&&!TM.duel)ctSend()}catch(e){}return r};
+// 8) 🥁 預備拍
+// ・有伴奏前奏：不顯示預備拍數字；可以選「只留最後兩小節前奏」
+// ・沒有伴奏：節拍器先打一小節，再顯示預備拍（1 2 3 4），弱起拍的歌會繼續數到第一個音
+const INTRO=()=>{try{return localStorage.getItem("rgIntro")==="2"?"2":"all"}catch(e){return"all"}};
+function barInfo(n){const str=String(SONGS[n]||"");const L=str.split(/[|｜]/).map(x=>parse(x).total).filter(x=>x>0);
+ if(M68.has(n))return{bar:3,first:L[0]||3};const cnt={};L.slice(1,-1).forEach(x=>cnt[x]=(cnt[x]||0)+1);
+ let bar=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||L[0]||4;if(bar<2||bar>6)bar=4;return{bar,first:L[0]||bar}}
+function postStart(n){if(!G||G.over||G.__pc||G.name!==n||!SONGS[n])return;G.__pc=1;
+ const {bar,first}=barInfo(n),old=!!(G.acc&&ACCON);
+ if(G.acc2&&G.ci>=bar-1e-6){G.noCount=1;if(INTRO()==="2"&&G.ci>2*bar+1e-6){const k=2*bar;G.acc2.ev=G.acc2.ev.filter(e=>e.b>=-k-1e-6);G.ci=k}}
+ else if(old){G.noCount=1}
+ else{const pad=first<bar-1e-6?bar-first:0,fb=G.notes.length?G.notes[0].b:0;/* 沒有伴奏時，跳過開頭整小節的休止（那是留給伴奏前奏的） */const sk=fb+pad>=bar?Math.floor((fb+pad)/bar+1e-6)*bar:0;G.ci=2*bar+pad-sk;G.cnt={bar,pad,fb,sk};G.cntPer=bar}
+ G.nb=null}
+const _stPC=start;start=async function(n){const r=await _stPC.apply(this,arguments);try{postStart(n)}catch(e){}return r};
+{const _rg=window.__rdyGo;if(_rg)window.__rdyGo=async n=>{const r=await _rg(n);try{postStart(n)}catch(e){}return r}}
+const _upPC=update;update=function(){_upPC.apply(this,arguments);if(!G||G.over)return;const c=$("count");if(!c)return;
+ if(G.noCount){if(c.textContent)c.textContent="";return}
+ if(G.cnt){const b=G.beat,C=G.cnt,cb=G.cb||1;let t="";
+  if(b<C.fb&&b>=C.sk-C.pad-C.bar-1e-6){const x=b+C.pad,m=((x%C.bar)+C.bar)%C.bar;t=String(Math.floor(m/cb+1e-6)+1)}
+  else if(b<C.sk-C.pad-C.bar&&b>=-G.ci-.01)t="🥁";
+  if(c.textContent!==t)c.textContent=t}};
+// 準備畫面：「伴奏前奏」選項
+{const ra=$("racc"),lab=ra&&ra.closest("label");if(lab){const l=document.createElement("label");l.id="rintl";l.innerHTML='伴奏前奏<select id="rintro"><option value="all">完整前奏</option><option value="2">只留最後兩小節</option></select>';lab.after(l);
+  const s=$("rintro");s.value=INTRO();s.onchange=()=>{try{localStorage.setItem("rgIntro",s.value)}catch(e){}}}}
+const _rnPC=rnote;rnote=function(){_rnPC.apply(this,arguments);const l=$("rintl"),n=RDYN;if(!l)return;const A=n&&window.accHas&&accHas(n)&&$("racc").value==="1";l.style.opacity=A?1:.45;$("rintro").disabled=!A;$("rintro").value=INTRO()};
+{const ra=$("racc");ra&&ra.addEventListener("change",()=>rnote())}
 // ==================== 合併版新增：結束 ====================
 
 build();window.__afterBuild&&__afterBuild();(()=>{const M=$("menu"),sp=$("splash");let done=0;const go=()=>{if(done)return;done=1;M.classList.add("ready");if(sp){sp.classList.add("gone");setTimeout(()=>sp.remove(),500)}};const im=document.querySelector("#hubbg img:not(.bk)");if(im&&!im.complete){im.addEventListener("load",go);im.addEventListener("error",go)}else if(im&&im.decode){im.decode().then(go,go)}else go();setTimeout(go,4000)})();fgSet((()=>{try{return localStorage.getItem("rgFpos")||"b"}catch(e){return "b"}})());hubRefresh();try{if(CLS.list.length>1&&!sessionStorage.getItem("rgPicked"))openSheet("cls")}catch(e){}setInterval(()=>{if(!M.hidden){const m=$("rmic");m&&(m.textContent=micOn?"🎤 麥克風已開啟":"🎤 開啟麥克風",m.classList.toggle("on",!!micOn));roll()}},1500);
