@@ -347,9 +347,12 @@
         <div class="help" id="diffHelp" style="margin:-4px 0 6px 82px"></div>
         <div class="row"><label class="t">速度</label>
           <span style="font-size:20px">🐢</span>
-          <input type="range" id="tempo" min="50" max="150" step="1" value="100">
+          <input type="range" id="tempo" min="25" max="150" step="1" value="100">
           <span style="font-size:20px">🐇</span>
           <span id="tempoVal" class="tempoTag">♩= 100</span>
+        </div>
+        <div class="row"><label class="t"></label>
+          <div class="seg" id="spdSeg"><button data-r=".5">🐢 慢兩倍</button><button data-r=".75">慢一點</button><button data-r="1">原速</button></div>
         </div>
         <div class="row"><label class="t">音色</label>
           <div class="seg" id="timbreSeg"><button data-v="synth">🎹 直笛音</button><button data-v="voice">🎤 人聲唱名</button><button data-v="both">🎶 兩個一起</button></div>
@@ -791,8 +794,10 @@ function renderSongs(){
   $('stStars').textContent=sum;$('stStarsMax').textContent=all.length*3;$('stPlayed').textContent=played;$('stTop').textContent=top;
   $('sbName').textContent=curSong().name;
 }
-function setTempo(v){$('tempo').value=v;$('tempoVal').textContent='♩= '+v;}
-$('tempo').oninput=e=>$('tempoVal').textContent='♩= '+e.target.value;
+function spdMark(){const b=curSong().tempo,v=+$('tempo').value;$('spdSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',Math.round(b*+x.dataset.r)===v));}
+function setTempo(v){v=Math.max(25,Math.min(150,Math.round(v)));$('tempo').value=v;$('tempoVal').textContent='♩= '+v;try{spdMark();}catch(e){}}
+$('tempo').oninput=e=>{$('tempoVal').textContent='♩= '+e.target.value;spdMark();};
+$('spdSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>setTempo(curSong().tempo*+b.dataset.r));
 $('diffSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   diff=+b.dataset.v;$('diffSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
 });
@@ -857,7 +862,7 @@ $('edSave').onclick=()=>{
   const eg=$('edGroup').value,ef=$('edFolder').value.trim();if(eg)s.group=eg;if(ef)s.folder=ef;
   if(ef){const o=store.get('song_folders',{});o[ef]=true;store.set('song_folders',o);}
   customs.push(s);store.set('bubble_customs',customs);selId=s.id;store.set('bubble_sel',selId);
-  setTempo(Math.min(150,Math.max(50,s.tempo)));
+  setTempo(Math.min(150,Math.max(25,s.tempo)));
   $('edName').value='';$('edNotes').value='';stopPreview();
   $('editor').classList.add('hidden');$('menu').classList.remove('hidden');renderSongs();
 };
@@ -916,7 +921,7 @@ function doImport(){
     if(customs.some(c=>c.name===s.name&&c.text.trim()===s.text.trim())){skipped++;continue;}
     const ns={id:'c'+Date.now()+'_'+added,custom:true,...s};customs.push(ns);added++;selId=ns.id;
   }
-  if(added){store.set('bubble_customs',customs);store.set('bubble_sel',selId);setTempo(Math.min(150,Math.max(50,curSong().tempo)));renderSongs();}
+  if(added){store.set('bubble_customs',customs);store.set('bubble_sel',selId);setTempo(Math.min(150,Math.max(25,curSong().tempo)));renderSongs();}
   const parts=[];if(added)parts.push(`✓ 匯入 ${added} 首`);if(skipped)parts.push(`${skipped} 首已經有了，略過`);
   m.className=bad.length?'err':'ok';m.textContent=parts.concat(bad).join('；');
   if(added&&!bad.length)setTimeout(closeShare,900);
