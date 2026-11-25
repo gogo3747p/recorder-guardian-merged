@@ -4396,8 +4396,13 @@ Storage.prototype.removeItem=function(k){raw.rm.call(this,k);if(this===ls)mark(S
 const put=(k,v)=>{v==null?raw.rm.call(ls,k):raw.set.call(ls,k,v)};
 function readCls(id){const cur=CL().cur===id,d={};PK.forEach(k=>{d[k]=ls.getItem(cur?k:bk(id,k))});return d}
 function writeCls(id,d){const cur=CL().cur===id;muted=true;PK.forEach(k=>{if(k in d)put(cur?k:bk(id,k),d[k])});muted=false}
+function snap(why){try{const d={};for(let i=0;i<ls.length;i++){const k=ls.key(i);if(/^rg/.test(k)&&k!==MK&&!/^rgBak/.test(k))d[k]=ls.getItem(k)}let L=J(ls.getItem("rgBak"))||[];L.unshift({t:Date.now(),why,d});L=L.slice(0,3);for(;;){try{raw.set.call(ls,"rgBak",JSON.stringify(L));break}catch(e){if(L.length<=1)break;L.pop()}}}catch(e){}}
+function restoreSnap(i){const L=J(ls.getItem("rgBak"))||[],b=L[i];if(!b)return false;snap("還原前");muted=true;Object.entries(b.d).forEach(([k,v])=>put(k,v));muted=false;if(on()){M0.dc=true;CL().list.forEach(c=>M0.dk[c.id]=true);save()}return true}
+// 找回不見的班級：資料還在這台平板（rgC:班級代號:…），只是不在班級名單裡
+function lostCls(){const ids=new Set(),have=new Set(CL().list.map(c=>c.id));for(let i=0;i<ls.length;i++){const m=/^rgC:([^:]+):(.+)$/.exec(ls.key(i));if(m&&PK.includes(m[2])&&!have.has(m[1]))ids.add(m[1])}
+ return[...ids].map(id=>{const g=k=>ls.getItem(bk(id,k)),st=J(g("rgStars"))||{},p=J(g("rgProf"))||{};return{id,coins:+g("rgCoins")||0,stars:Object.values(st).reduce((a,b)=>a+(+b||0),0),exp:+p.exp||0}}).filter(x=>x.coins||x.stars||x.exp).sort((a,b)=>b.coins-a.coins)}
 function readCfg(){const d={};GK.forEach(k=>{d[k]=ls.getItem(k)});return d}
-function writeCfg(d){muted=true;GK.forEach(k=>{if(!(k in d))return;if(k==="rgClasses"){let r;try{r=JSON.parse(d[k])}catch(e){}if(!r||!Array.isArray(r.list)||!r.list.length)return;const cur=CL().cur;r.cur=r.list.some(c=>c.id===cur)?cur:r.list[0].id;put(k,JSON.stringify(r));return}put(k,d[k])});muted=false}
+function writeCfg(d){muted=true;GK.forEach(k=>{if(!(k in d))return;if(k==="rgClasses"){let r;try{r=JSON.parse(d[k])}catch(e){}if(!r||!Array.isArray(r.list)||!r.list.length)return;const cur=CL().cur;r.cur=r.list.some(c=>c.id===cur)?cur:r.list[0].id;if(cur&&r.cur!==cur)PK.forEach(x=>{const v=ls.getItem(x);if(v!=null)put(bk(cur,x),v)});put(k,JSON.stringify(r));return}put(k,d[k])});muted=false}
 const J=s=>{try{return JSON.parse(s)}catch(e){return null}},nn=o=>Object.fromEntries(Object.entries(o).filter(([k,v])=>v!=null));
 // 合併：星星、最高分取較高，完成的任務合併，經驗值取較高
 function setBase(id,d){if(!id||!d)return;const p=J(d.rgProf)||{};(M0.base||(M0.base={}))[id]={c:+d.rgCoins||0,e:+p.exp||0}}
@@ -4437,7 +4442,7 @@ async function push(force){if(!on())return;if(busy){clearTimeout(timer);timer=se
  catch(e){state="err";lastErr=e.message||String(e)}busy=false;dot();if(panel&&!panel.hidden)draw()}
 function banner(){if(playing()){setTimeout(banner,5000);return}let b=document.getElementById("syncban");if(b)return;b=document.createElement("button");b.id="syncban";b.innerHTML="☁️ 收到其他平板的新資料，點這裡更新畫面";b.onclick=()=>location.reload();document.body.appendChild(b)}
 // ---- 介面 ----
-let btn=null,panel=null,showQR=false,pend=null;
+let btn=null,panel=null,showQR=false,pend=null,pendM=null;
 function dot(){if(!btn)return;const i=btn.querySelector("i");btn.dataset.st=on()?state||"ok":"off";i.textContent=!on()?"☁️":state==="err"?"⚠️":state==="sync"?"🔄":"☁️"}
 function addBtn(){const r=document.getElementById("hubr");if(!r||r.querySelector("#syncbtn"))return;r.insertAdjacentHTML("beforeend",`<button class="ib" id="syncbtn" aria-label="雲端同步"><i>☁️</i><span>雲端同步</span></button>`);btn=r.querySelector("#syncbtn");btn.onclick=e=>{e.stopPropagation();open()};dot()}
 setInterval(addBtn,1000);addBtn();
@@ -4449,11 +4454,16 @@ function clsWarn(){const L=CL().list||[],cur=L.find(c=>c.id===CL().cur),dup=cur&
  return`<div class="qr" style="border-color:${dup?"#e53935":"#e2c98a"}"><div class="qi">🏫</div><div><div class="qt">這台裝置目前的班級：${esc(cur?cur.name:"—")}</div><div class="qd">${dup?`<b style="color:#c62828">有 ${L.filter(c=>c.name===cur.name).length} 個同名的「${esc(cur.name)}」！這通常是電腦和平板各自建立了一個預設班級，所以金幣分在兩個班裡。請到「🏫 我的班級」選有金幣的那一個，或把其中一個改名。</b>`:"其他裝置也要選這個班，金幣和星星才會一樣。"}</div></div></div>`}
 function draw(){const c=panel.querySelector(".sc");
  c.innerHTML=`<p class="sub" style="font-size:17px;line-height:1.7">連上同一個雲端的平板會共用：<br>📚 曲目、資料夾、城堡曲目、年級任務、魔法卡、班級名單<br>🫧 唱名泡泡的最佳成績、排行榜、自訂歌曲<br>🏫 各班的等級、金幣、星星、任務進度<br><small>${isFB()?"資料存在您的 Firebase 即時資料庫（房間："+esc(M0.room)+"）。":"資料存在您 GitHub 帳號裡一個不公開的 Gist。"}主題、節拍器等「這台平板的顯示設定」不會同步。<br>⚠️ 進度是「依班級」同步的：每台裝置上方「🏫 我的班級」要選同一個班，才會看到一樣的金幣和星星。</small></p>
- ${clsWarn()}${on()?`<div class="qr done"><div class="qi">${state==="err"?"⚠️":"✅"}</div><div><div class="qt">${isFB()?"已連上 Firebase 雲端・房間 "+esc(M0.room):"已連上 GitHub 雲端"}</div><div class="qd">${state==="err"?`<span style="color:#c62828">暫時無法同步（${esc(lastErr)}）。資料會先存在這台平板，恢復後會自動補傳。</span>`:`上次同步：${tm(M0.at)}${waiting()?"　（有資料等待上傳）":""}`}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="qa claim" data-sy="now">🔄 立即同步</button><button class="qa" data-sy="qr">📱 連接其他平板</button><button class="qa" data-sy="off">中斷</button></div></div>${showQR?qrHTML():""}${isFB()?ctBox():""}`
+ ${rescueBox()}${clsWarn()}${on()?`<div class="qr done"><div class="qi">${state==="err"?"⚠️":"✅"}</div><div><div class="qt">${isFB()?"已連上 Firebase 雲端・房間 "+esc(M0.room):"已連上 GitHub 雲端"}</div><div class="qd">${state==="err"?`<span style="color:#c62828">暫時無法同步（${esc(lastErr)}）。資料會先存在這台平板，恢復後會自動補傳。</span>`:`上次同步：${tm(M0.at)}${waiting()?"　（有資料等待上傳）":""}`}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="qa claim" data-sy="now">🔄 立即同步</button><button class="qa" data-sy="qr">📱 連接其他平板</button><button class="qa" data-sy="off">中斷</button></div></div>${showQR?qrHTML():""}${isFB()?ctBox():""}`
  :`<div class="syset"><h3>🅰 已經有平板連上了？</h3><p>在那台平板按「📱 連接其他平板」，用這台的相機掃 QR code 就好。沒有相機的話，把連線碼貼在這裡：</p><div class="syrow"><input id="syjc" placeholder="貼上連線碼" autocomplete="off"><button class="qa claim" data-sy="join">連線</button></div></div>
  ${fbSetup()}<details class="syset"><summary><b>🅲 改用 GitHub Gist 同步（不用 Firebase 時）</b></summary><ol><li>電腦登入 GitHub，打開 <b>github.com/settings/personal-access-tokens/new</b>。</li><li>Token name 填「直笛守護者」，Expiration 選最長的期限。</li><li>往下找到 <b>Permissions</b> → <b>Account permissions</b> → <b>Gists</b>，選 <b>Read and write</b>。其他都不用改。</li><li>按最下面的 <b>Generate token</b>，複製 <code>github_pat_</code> 開頭的那串，貼到下面。</li></ol><p style="color:#2e7d32;font-weight:900">💡 之前已經建立過雲端？貼上權杖後會自動找回原本的雲端資料，不會重新建一個新的。</p><ol style="display:none"></ol><div class="syrow"><input id="sytok" type="password" placeholder="貼上 github_pat_… 權杖" autocomplete="off"><button class="qa claim" data-sy="make">建立雲端</button></div></details>`}
  <div id="syask"></div>`}
 function ask(h){const a=panel.querySelector("#syask");a&&(a.innerHTML=h)}
+function rescueBox(){const lost=lostCls(),B=J(ls.getItem("rgBak"))||[];if(!lost.length&&!B.length)return"";
+ return`<div class="syset" style="border-color:#e57373">${lost.length?`<h3>🛟 找回不見的班級</h3><p>這台平板還留著 ${lost.length} 個「不在班級名單裡」的班級資料。請依照金幣和星星數，替每個班填回名字（不要的就留空），再按「加回班級名單」。</p>
+ ${lost.map(x=>`<div class="syrow" data-lost="${esc(x.id)}" style="align-items:center"><span style="min-width:190px;font-weight:900">💰 ${x.coins}　⭐ ${x.stars}　EXP ${x.exp}</span><input placeholder="班級名稱，例如 401" maxlength="12"></div>`).join("")}
+ <div class="syrow"><button class="qa claim" data-sy="lostadd">🛟 加回班級名單</button></div>`:""}
+ ${B.length?`<details${lost.length?"":" open"}><summary><b>🗂 自動備份（連線、合併前存的）</b></summary>${B.map((x,i)=>`<div class="syrow" style="align-items:center"><span style="flex:1">${tm(x.t)}・${esc(x.why||"")}・${(J(x.d.rgClasses)||{list:[]}).list.length} 個班級</span><button class="qa" data-sy="bak" data-i="${i}">還原這份</button></div>`).join("")}</details>`:""}</div>`}
 // ---- Firebase 設定畫面 ----
 const CTS=()=>{try{return JSON.parse(ls.getItem("classtown_sync"))||{}}catch(e){return{}}};
 const sameDB=(a,b)=>String(a||"").trim().replace(/\/+$/,"")===String(b||"").trim().replace(/\/+$/,"");
@@ -4471,13 +4481,20 @@ const err=m=>`<p style="color:#c62828;text-align:center;font-weight:900">${esc(m
 const tst=h=>{try{typeof toast==="function"&&toast(h)}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 async function join(g,tok){ask(`<p style="text-align:center">🔄 連線中…</p>`);let R;try{R=await get(g,tok)}catch(e){ask(err("無法連線："+e.message));return}
- M0=Object.assign(blank(),typeof g==="object"?{fb:g.f,room:g.r,ctr:g.c||ctGuess(g.f)}:{g,tok});const has=R.cfg||Object.keys(R.cls).length;
+ const NM=Object.assign(blank(),typeof g==="object"?{fb:g.f,room:g.r,ctr:g.c||ctGuess(g.f)}:{g,tok});const has=R.cfg||Object.keys(R.cls).length;if(!has)M0=NM;else{pendM=NM;if(on()&&M0.at)snap("切換雲端前");M0=blank();save();dot()}
  if(!has){save();state="ok";await push(true);showQR=false;draw();tst("✅ 已連上雲端");return}
  pend=R;ask(`<div class="qr"><div class="qi">☁️</div><div><div class="qt">雲端上已經有資料</div><div class="qd">最後更新：${tm(Math.max(R.cfg?R.cfg.t:0,...Object.values(R.cls).map(x=>x.t)))}，共 ${R.cfg?(J(R.cfg.d.rgClasses)||{list:[]}).list.length:0} 個班級</div></div></div>
-  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px"><button class="qa claim" data-sy="down" style="font-size:19px">⬇ 使用雲端資料（建議）</button><button class="qa" data-sy="up" style="font-size:19px">⬆ 用這台的資料覆蓋雲端</button></div>`)}
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px"><button class="qa claim" data-sy="merge" style="font-size:19px">🔀 合併兩邊的資料（建議）</button><button class="qa" data-sy="down" style="font-size:19px">⬇ 只用雲端資料</button><button class="qa" data-sy="up" style="font-size:19px">⬆ 用這台的資料覆蓋雲端</button></div><p style="text-align:center;font-size:14px;color:#6b5a30">合併：兩邊的班級都留下，同一個班的星星、最高分取較高的。不管選哪一個，這台原本的資料都會先自動備份。</p>`)}
 async function act(e){const b=e.target.closest("[data-sy]");if(!b)return;const k=b.dataset.sy,c=panel.querySelector(".sc");
  if(k==="now"){state="sync";draw();await push().catch(()=>{});await pull();draw();return}
  if(k==="qr"){showQR=!showQR;draw();return}
+ if(k==="merge"){const R=pend;if(!R)return;snap("合併前");if(pendM){M0=pendM;pendM=null}const L0=readCfg(),c0=CL().list.map(c=>c.id);
+  if(R.cfg)writeCfg(mergeCfg(R.cfg.d,L0));
+  CL().list.forEach(c=>{const x=R.cls[c.id];if(!x)return;const nd=c0.includes(c.id)?mergeCls(x.d,readCls(c.id)):x.d;writeCls(c.id,nd);setBase(c.id,nd)});
+  save();state="ok";await push(true);location.reload();return}
+ if(k==="lostadd"){const rows=[...c.querySelectorAll("[data-lost]")],cl=CL();let n=0;rows.forEach(r=>{const nm=(r.querySelector("input").value||"").replace(/[<>"]/g,"").trim().slice(0,12);if(!nm)return;cl.list.push({id:r.dataset.lost,name:nm});n++});
+  if(!n){ask(err("請至少替一個班級填上名字"));return}raw.set.call(ls,"rgClasses",JSON.stringify(cl));M0.dc=true;cl.list.forEach(x=>M0.dk[x.id]=true);save();if(on())await push(true);tst("🛟 找回 "+n+" 個班級！");setTimeout(()=>location.reload(),600);return}
+ if(k==="bak"){const i=+b.dataset.i;if(!confirm("把這台平板還原成這份備份？\n（現在的資料也會先備份一份）"))return;if(restoreSnap(i)){if(on())await push(true);location.reload()}return}
  if(k==="fbmake"){const f=(c.querySelector("#syfb").value||"").trim().replace(/\/+$/,""),r=(c.querySelector("#syroom").value||"").trim();
   if(!FBOK(f)){ask(err("資料庫網址不對：要用 https 開頭，結尾是 firebaseio.com 或 firebasedatabase.app"));return}
   if(!/^[A-Za-z0-9_-]{4,40}$/.test(r)){ask(err("房間代碼請用 4～40 個英文、數字"));return}
@@ -4496,8 +4513,8 @@ async function act(e){const b=e.target.closest("[data-sy]");if(!b)return;const k
   const ids=CL().list.map(x=>x.id);Object.entries(R.cls||{}).forEach(([id,x])=>{if(x&&x.d&&ids.includes(id))writeCls(id,mergeCls(x.d,readCls(id)))});
   M0.dc=true;ids.forEach(id=>M0.dk[id]=true);save();await push();
   ask(`<p style="text-align:center;font-weight:900;color:#2e7d32">✅ 搬好了！共 ${CL().list.length} 個班級。畫面即將重新整理…</p>`);setTimeout(()=>location.reload(),1500);return}
- if(k==="down"){const R=pend;if(!R)return;if(R.cfg){writeCfg(R.cfg.d);M0.cfgT=R.cfg.t}CL().list.forEach(c=>{const x=R.cls[c.id];if(x){writeCls(c.id,x.d);setBase(c.id,x.d);M0.cls[c.id]=x.t}});M0.dc=false;M0.dk={};M0.at=Date.now();save();location.reload();return}
- if(k==="up"){save();state="ok";await push(true);draw();return}}
+ if(k==="down"){const R=pend;if(!R)return;snap("使用雲端資料前");if(pendM){M0=pendM;pendM=null}if(R.cfg){writeCfg(R.cfg.d);M0.cfgT=R.cfg.t}CL().list.forEach(c=>{const x=R.cls[c.id];if(x){writeCls(c.id,x.d);setBase(c.id,x.d);M0.cls[c.id]=x.t}});M0.dc=false;M0.dk={};M0.at=Date.now();save();location.reload();return}
+ if(k==="up"){if(pendM){snap("覆蓋雲端前");M0=pendM;pendM=null}save();state="ok";await push(true);draw();return}}
 // 掃 QR code 開啟的連結：#rgsync=…
 function fromHash(){const m=/^#rgsync=([A-Za-z0-9_\-]+)/.exec(location.hash);if(!m)return;const o=parseJoin(m[1]);try{history.replaceState(null,"",location.pathname+location.search)}catch(e){location.hash=""}
  if(!o)return;const go=()=>{if(!document.getElementById("hubr")){setTimeout(go,300);return}addBtn();open();if(on()&&(M0.g===o.g||(typeof o.g==="object"&&M0.fb===o.g.f&&M0.room===o.g.r))){ask(`<p style="text-align:center">這台平板已經連上同一個雲端了。</p>`);return}join(o.g,o.t)};go()}
