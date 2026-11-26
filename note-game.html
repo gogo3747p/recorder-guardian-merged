@@ -133,6 +133,9 @@
 .vsGrid.many{flex-wrap:wrap;justify-content:center;gap:10px!important}.vsGrid.many .vsCol{flex:1 1 150px;max-width:220px;padding:12px 10px}.vsGrid.many .vsCrown{font-size:26px;font-weight:900}.vsGrid.many .vsScore{font-size:clamp(28px,4vw,44px)}
 .tsBoard{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;font-size:17px}.tsBoard span{background:#0004;border-radius:999px;padding:3px 12px}.tsBoard .tdot{margin:0 6px 0 0}
 .ctSent{background:#22c55e22;border:3px solid #22c55e;border-radius:16px;padding:10px 14px;line-height:1.7;font-size:18px}.ctSent small{display:block;opacity:.85;font-size:14px}.ctSent button{margin-top:6px}
+.psHead{text-align:center;margin:4px 0 14px}.psLab{font-size:16px;opacity:.8;letter-spacing:2px}.psName{font-size:clamp(26px,4vw,38px);font-weight:900;color:#ffd23f}.psInfo{opacity:.85;margin-top:2px}
+.psBtns{position:sticky;bottom:0;padding:10px 0;margin-top:12px;background:#0b1d3af0;border-radius:18px;justify-content:center;flex-wrap:wrap}#psGo{padding:14px 34px;font-size:22px}
+#setSec{display:none}
 .tdot{display:inline-block;width:16px;height:16px;border-radius:50%;margin:0 6px;vertical-align:-1px;border:2px solid #fff}
   .vsGrid{display:flex;gap:10px;align-items:stretch}
   .vsCol{flex:1;background:#0004;border:3px solid var(--tc);border-radius:18px;padding:12px;text-align:center;position:relative}
@@ -312,9 +315,9 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" id="setSec">
       <h2>⚙️ 遊戲設定</h2>
-      <div class="panel">
+      <div class="panel" id="setPanel">
         <div class="row"><label class="t">模式</label>
           <div class="seg" id="modeSeg">
             <button data-v="solo">👤 單人</button><button data-v="versus">⚔️ 同時對戰</button><button data-v="turns">🔁 輪流對戰</button>
@@ -437,6 +440,19 @@
     <div class="btns">
       <button class="btn ghost" id="tsQuit">☰ 回選單</button>
       <button class="btn big" id="tsGo"></button>
+    </div>
+  </div>
+</div>
+
+<!-- 開始前：曲目設定 -->
+<div id="preStart" class="overlay hidden">
+  <div class="wrap">
+    <div class="psHead"><div class="psLab">🎼 曲目設定</div><div class="psName" id="psName"></div><div class="psInfo" id="psInfo"></div></div>
+    <div id="psBody"></div>
+    <div class="btns psBtns">
+      <button class="btn ghost" id="psBack">← 換一首</button>
+      <button class="btn ghost" id="psPrev">🔊 試聽</button>
+      <button class="btn big" id="psGo">▶ 開始遊戲</button>
     </div>
   </div>
 </div>
@@ -825,7 +841,7 @@ function curSong(){return allSongs().find(s=>s.id===selId)||BUILTIN[0];}
 
 let previewing=false;
 function stopPreview(){if(previewBus){try{previewBus.disconnect();}catch(e){}previewBus=null;}previewing=false;
-  $('previewBtn').textContent='🔊 試聽';$('edPreview').textContent='🔊 試聽';}
+  $('previewBtn').textContent='🔊 試聽';$('edPreview').textContent='🔊 試聽';const pp=document.getElementById('psPrev');if(pp)pp.textContent='🔊 試聽';}
 function whenVoices(cb){
   if(TIMBRE==='synth'||voiceBufs)return cb();
   let k=0;const iv=setInterval(()=>{if(voiceBufs||++k>40){clearInterval(iv);cb();}},75);
@@ -839,7 +855,17 @@ function togglePreview(notes,tempo,btn){
   setTimeout(()=>{if(previewBus===bus)stopPreview();},(end-AC.currentTime)*1000+200);
 }
 $('previewBtn').onclick=()=>{const s=curSong();togglePreview(parseSong(s.text).notes,+$('tempo').value,$('previewBtn'));};
-$('startBtn').onclick=()=>{stopPreview();startGame();};
+// 按「開始」→ 先跳出曲目設定，確認後才開始
+function openPreStart(){stopPreview();const s=curSong(),p=parseSong(s.text).notes.filter(n=>!n.rest);
+  $('psName').textContent=s.name;$('psInfo').textContent=`${p.length} 個音${s.meter?'・'+s.meter+' 拍':''}・原速 ♩=${s.tempo}`;
+  const b=$('psBody');if(!b.contains($('setPanel')))b.appendChild($('setPanel'));
+  $('psGo').textContent=MODE==='solo'?'▶ 開始遊戲':'⚔️ 開戰';$('preStart').classList.remove('hidden');$('preStart').scrollTop=0;}
+function closePreStart(){stopPreview();$('preStart').classList.add('hidden');}
+$('startBtn').onclick=openPreStart;
+$('psBack').onclick=closePreStart;
+$('psPrev').onclick=()=>{const s=curSong();togglePreview(parseSong(s.text).notes,+$('tempo').value,$('psPrev'));};
+$('psGo').onclick=()=>{closePreStart();startGame();};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('preStart').classList.contains('hidden'))closePreStart();});
 
 // 編輯器
 function openEditor(o){stopPreview();o=(o&&o.folder!=null)?o:{};$('edGroup').value=o.group||'';$('edFolder').value=o.folder||'';if(o.name!=null)$('edName').value=o.name;if(o.tempo)$('edTempo').value=o.tempo;
