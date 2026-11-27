@@ -2228,6 +2228,17 @@ body:not(.tmode) [data-a="maplock"]{display:none!important}
 
 .ctbox{max-width:620px;margin:12px auto;padding:12px 16px;border-radius:18px;background:#f0fdf4;border:3px solid #22c55e;color:#14532d;text-align:center;font-size:18px}.ctbox p{font-size:19px}.ctbox p{margin:6px 0;line-height:1.6}.ctbox small{display:block;color:#3f6212;margin:4px 0}.ctbox button{margin-top:6px}
 
+/* 教學模式 */
+#rtbox .rrow{margin-top:6px}.rtloop{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;justify-content:center;font-weight:800;margin:6px 0}.rtloop input{width:22px;height:22px}.rthint{display:block;opacity:.85}
+#tpause{font-weight:900}#tseg{font-weight:800}
+#tpz{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:rgba(15,12,50,.72)}
+#tpz .tpc{background:#fffdf4;color:#2a2350;border:4px solid #e2b84a;border-radius:24px;padding:20px 26px;text-align:center;max-width:min(560px,92vw)}
+#tpz h2{margin:0 0 4px;font-size:30px}#tpz p{margin:0 0 12px;font-weight:700}
+#tpz .tpb{display:flex;flex-direction:column;gap:10px}#tpz button{font:inherit;font-weight:900;font-size:20px;padding:10px 18px;border-radius:999px;border:3px solid #c9a24a;background:#fff;cursor:pointer}#tpz button.big{background:#ffd23f;font-size:24px}
+#tpz[hidden]{display:none}
+#rdy label.rtloop{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;font-size:clamp(18px,2.4vw,22px);width:auto}
+#rdy label.rtloop input{width:24px;height:24px;flex:0 0 auto}
+
 </style>
 </head>
 <body>
@@ -2504,7 +2515,7 @@ function pnTone(f,when,dur,vel){const o=ac.createOscillator(),o2=ac.createOscill
  o.connect(g);o2.connect(g2);o3.connect(g3);g2.connect(g);g3.connect(g);g.connect(lp);lp.connect(ac.destination);[o,o2,o3].forEach(n=>{n.start(when);n.stop(end+.05)})}
 function accSched(t){if(!G||!G.acc||!ACCON)return;const s=sec();while(G.ai<G.acc.length){const o=G.acc[G.ai],w=G.t0+(o.b+G.ci)*s;if(w>t+.25)break;if(w>=t-.05)o.k==="p"?pnTone(freq(o.n-12),Math.max(w,t),o.d*s*.95,.2):recTone(freq(o.n),Math.max(w,t),Math.max(.1,o.d*s*.92),o.k==="q"?.4:1);G.ai++}}
 function update(){const t=ac.currentTime,b=(t-LATf()-G.t0)/sec()-G.ci,pb=G.beat,N=G.notes.length,dt=Math.min(.1,Math.max(0,t-G.lt));G.lt=t;G.beat=b;accSched(t);
- const mt=+$("metro").value,bs=G.bs||1,per=bs===.5?6:bs>1?2:(mt||G.cntPer||4),cin=G.cnt&&b<Math.max(0,G.cnt.fb);if(mt||cin){if(G.nb==null)G.nb=Math.ceil(Math.max(b,-G.ci)/bs-1e-6);while(G.nb*bs<G.total&&(mt||G.nb*bs<Math.max(0,G.cnt.fb))){const tt=G.t0+(G.nb*bs+G.ci)*sec();if(tt>t+.15)break;if(tt>=t-.03){const k=(((G.nb+(G.cnt?Math.round(G.cnt.pad/bs):0))%per)+per)%per;tick(per===6?k%3===0:k===0,tt)};G.nb++}}else G.nb=null;
+ const mt=+$("metro").value,bs=G.bs||1,per=bs===.5?6:bs>1?2:(mt||G.cntPer||4),cin=G.cnt&&b<Math.max(0,G.cnt.fb);if(mt||cin){if(G.nb==null)G.nb=Math.ceil(Math.max(b,G.tickLo!=null?G.tickLo:-G.ci)/bs-1e-6);while(G.nb*bs<G.total&&(mt||G.nb*bs<Math.max(0,G.cnt.fb))){const tt=G.t0+(G.nb*bs+G.ci)*sec();if(tt>t+.15)break;if(tt>=t-.03){const k=(((G.nb+(G.cnt?Math.round(G.cnt.pad/bs):0))%per)+per)%per;tick(per===6?k%3===0:k===0,tt)};G.nb++}}else G.nb=null;
  $("count").textContent=b<0?(b<-G.ci?"":Math.ceil(-b/(G.cb||G.bs||1)-1e-9)):"";
  ACX=null;if(G.acc&&ACCON){const xs=[];for(const o of G.acc){if(o.b>b+.3)break;if(o.b-.05<=b&&b<o.b+o.d+.15&&o.k!=="p"&&o.n)xs.push(o.n)}if(xs.length){const ce=curNote(b)||G.notes.find(q=>q.b>=b);ACX=xs.filter(m=>!ce||Math.abs(m-ce.n)>=1)}}
   const m=detect();G.pk=Math.max(LV,G.pk*.94);if(LV<G.pk*.45)G.armed=true;
@@ -4370,6 +4381,57 @@ const _upPC=update;update=function(){_upPC.apply(this,arguments);if(!G||G.over)r
   const s=$("rintro");s.value=INTRO();s.onchange=()=>{try{localStorage.setItem("rgIntro",s.value)}catch(e){}}}}
 const _rnPC=rnote;rnote=function(){_rnPC.apply(this,arguments);const l=$("rintl"),n=RDYN;if(!l)return;const A=n&&window.accHas&&accHas(n)&&$("racc").value==="1";l.style.opacity=A?1:.45;$("rintro").disabled=!A;$("rintro").value=INTRO()};
 {const ra=$("racc");ra&&ra.addEventListener("change",()=>rnote())}
+// 9) 🎓 教學模式：選段落、反覆練習、隨時暫停（不扣愛心、不計星星金幣）
+function tSrc(n){return String((ACCON&&ACCMEL[n])||SONGS[n]||"")}
+function tBars(n){const segs=tSrc(n).split(/[|｜]/),{bar}=barInfo(n),out=[];let b=0,num=0,first=true;
+ segs.forEach(sg=>{const p=parse(sg),len=p.total;if(len<=0)return;const ns=p.notes;
+  if(ns.length){const pick=first&&(len<bar-1e-6||ns[0].b>1e-6);if(!pick)num++;out.push({s:b,e:b+len,lab:pick?"弱起":"第 "+num+" 小節",nm:ns.slice(0,4).map(nmS).join(" ")});first=false}
+  else if(out.length)out[out.length-1].e=b+len;b+=len});return out}
+// 準備畫面
+{const ra=$("racc"),row=ra&&ra.closest(".rrow");if(row){const d=document.createElement("div");d.id="rtwrap";d.innerHTML=`<div class="rrow"><label>模式<select id="rteach"><option value="">🎮 挑戰（計分、拿星星）</option><option value="t">🎓 教學模式（練習段落）</option></select></label></div>
+ <div id="rtbox" hidden><div class="rrow"><label>從<select id="rtfrom"></select></label><label>到<select id="rtto"></select></label></div>
+ <label class="rtloop"><input type="checkbox" id="rtloop" checked> 🔁 反覆練習這一段</label><small class="rthint">教學模式：可以按 ⏸ 暫停（或空白鍵），不扣愛心、不拿星星和金幣。</small></div>`;
+  row.parentNode.insertBefore(d,row);
+  const fill=()=>{const n=RDYN,B=n?tBars(n):[],f=$("rtfrom"),t=$("rtto"),fv=+f.value||0,tv=t.value===""?B.length-1:+t.value;
+   const op=B.map((x,i)=>`<option value="${i}">${x.lab}（${esc(x.nm)}）</option>`).join("");f.innerHTML=op;t.innerHTML=op;f.value=String(Math.min(fv,B.length-1));t.value=String(Math.min(Math.max(tv,+f.value),B.length-1))};
+  $("rteach").onchange=()=>{$("rtbox").hidden=!$("rteach").value;fill()};
+  $("rtfrom").onchange=()=>{if(+$("rtto").value<+$("rtfrom").value)$("rtto").value=$("rtfrom").value};
+  $("rtto").onchange=()=>{if(+$("rtto").value<+$("rtfrom").value)$("rtfrom").value=$("rtto").value};
+  window.__rtFill=n=>{if(window.__rtLast!==n){window.__rtLast=n;$("rtfrom").innerHTML="";$("rtto").innerHTML=""}fill()}}}
+{const _rnT=rnote;rnote=function(){_rnT.apply(this,arguments);try{window.__rtFill&&__rtFill(RDYN)}catch(e){}}}
+// 開始時套用教學模式
+function teachApply(n,o){const B=tBars(n);if(!B.length)return;const a=B[Math.max(0,Math.min(o.a,B.length-1))],z=B[Math.max(0,Math.min(o.b,B.length-1))];
+ const {bar}=barInfo(n),s0=a.s,e0=z.e;G.norew=true;G.hearts=10;G.notesAll=G.notes;G.notes=G.notes.filter(x=>x.b>=s0-1e-6&&x.b<e0-1e-6);G.total=e0;
+ G.teach={s:s0,e:e0,bar,loop:o.loop,round:1,bs:B.map(x=>x.s),ev:G.acc2?G.acc2.ev.slice():null,lab:a.lab+(a===z?"":" ～ "+z.lab)};
+ teachJump(s0,2);hud();tpBtn()}
+function teachJump(from,lead){const T=G.teach;if(G.hd){G.hd.on=false;G.hd=null}
+ G.notes.forEach(o=>{if(o.b>=from-1e-6){delete o.res;delete o.hb;delete o.hold;delete o.htot;delete o.mt;delete o.hf;o.on=false}});
+ let i=G.notes.findIndex(o=>o.b>=from-1e-6);G.i=i<0?G.notes.length:i;
+ const lo=from-lead*T.bar;G.t0=ac.currentTime+.4-LATf()-(lo+G.ci)*sec();G.lt=ac.currentTime;G.nb=null;G.tickLo=lo;T.from=from;G.fk="";G.armed=true;
+ if(G.cnt)G.cnt.fb=from;
+ try{accStop()}catch(e){}if(G.acc2&&T.ev){G.acc2.ev=T.ev;const k=T.ev.findIndex(e=>e.b>=lo-1e-6);G.acc2.i=k<0?T.ev.length:k}
+ if(G.acc){const k=G.acc.findIndex(x=>x.b>=lo-1e-6);G.ai=k<0?G.acc.length:k}
+ G.paused=false;const z=$("tpz");z&&(z.hidden=true);tpBtn()}
+{const _rgT=window.__rdyGo;if(_rgT)window.__rdyGo=async n=>{const on=$("rteach")&&$("rteach").value==="t",o={a:+$("rtfrom").value||0,b:+$("rtto").value||0,loop:$("rtloop").checked};
+ const r=await _rgT(n);try{if(on&&G&&G.name===n&&!G.over)teachApply(n,o)}catch(e){console.error(e)}return r}}
+// 暫停
+function tpBtn(){let b=$("tpause");if(!b){b=document.createElement("button");b.id="tpause";b.textContent="⏸ 暫停";b.onclick=()=>tPause();const bk=$("back");bk&&bk.after(b)}b.hidden=!(G&&G.teach&&!G.over);
+ let s=$("tseg");if(!s){s=document.createElement("span");s.id="tseg";s.className="pill";b.after(s)}s.hidden=b.hidden;if(!s.hidden)s.textContent="🎓 "+G.teach.lab+(G.teach.loop?"・第 "+G.teach.round+" 次":"")}
+function tPause(){if(!G||!G.teach||G.over||G.paused)return;G.paused=true;G.pb=G.beat;try{accStop()}catch(e){}
+ let z=$("tpz");if(!z){z=document.createElement("div");z.id="tpz";$("play").appendChild(z);z.onclick=e=>{const k=e.target.closest("[data-tp]");if(!k)return;const v=k.dataset.tp,T=G&&G.teach;if(!T)return;
+  if(v==="go"){const bs=T.bs.filter(x=>x<=G.pb+1e-6&&x>=T.s-1e-6);teachJump(bs.length?bs[bs.length-1]:T.s,1)}
+  else if(v==="top"){teachJump(T.s,1)}
+  else if(v==="menu"){z.hidden=true;toMenu()}}}
+ const T=G.teach,cur=T.bs.filter(x=>x<=G.pb+1e-6).length;
+ z.innerHTML=`<div class="tpc"><h2>⏸ 暫停中</h2><p>${esc(G.name)}・${esc(T.lab)}</p><div class="tpb"><button class="big" data-tp="go">▶ 從這一小節繼續</button><button data-tp="top">⏮ 從段落開頭</button><button data-tp="menu">← 換段落／回選單</button></div><small>繼續時會先數一小節的拍子再開始。</small></div>`;z.hidden=false}
+addEventListener("keydown",e=>{if(e.code!=="Space"||!G||!G.teach||G.over||/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test((document.activeElement||{}).tagName||""))return;e.preventDefault();if(G.paused){const g=document.querySelector('#tpz [data-tp="go"]');g&&g.click()}else tPause()});
+// 時間、反覆、預備拍
+const _upT=update;update=function(){if(G&&G.paused)return;_upT.apply(this,arguments);const T=G&&G.teach;if(!T||G.over)return;
+ if(T.loop&&G.beat>=T.e-.02&&G.i>=G.notes.length){T.round++;toast("🔁 再練一次（第 "+T.round+" 次）");teachJump(T.s,1)}
+ const c=$("count");if(!c)return;let t="";if(!G.noCount){const b=G.beat;if(b<T.from&&b>=T.from-T.bar-1e-6){const x=b-(T.from-T.bar);t=String(Math.floor(x/(G.cb||1)+1e-6)+1)}else if(b<T.from-T.bar&&b>=G.tickLo-.01)t="🥁"}if(c.textContent!==t)c.textContent=t};
+const _missT=miss;miss=function(o){if(G&&G.teach)G.hearts=Math.max(G.hearts,5);_missT.apply(this,arguments);if(G&&G.teach){G.hearts=10;hud()}};
+const _finT=finish;finish=function(w){const T=G&&G.teach;_finT.apply(this,arguments);if(T){$("otxt").textContent="🎓 段落練習完成！";const cb=$("certbtn");cb&&(cb.hidden=true);tpBtn()}};
+const _tmT=toMenu;toMenu=function(){const z=$("tpz");z&&(z.hidden=true);_tmT.apply(this,arguments);const b=$("tpause");b&&(b.hidden=true);const s=$("tseg");s&&(s.hidden=true)};
 // ==================== 合併版新增：結束 ====================
 
 build();window.__afterBuild&&__afterBuild();(()=>{const M=$("menu"),sp=$("splash");let done=0;const go=()=>{if(done)return;done=1;M.classList.add("ready");if(sp){sp.classList.add("gone");setTimeout(()=>sp.remove(),500)}};const im=document.querySelector("#hubbg img:not(.bk)");if(im&&!im.complete){im.addEventListener("load",go);im.addEventListener("error",go)}else if(im&&im.decode){im.decode().then(go,go)}else go();setTimeout(go,4000)})();fgSet((()=>{try{return localStorage.getItem("rgFpos")||"b"}catch(e){return "b"}})());hubRefresh();try{if(CLS.list.length>1&&!sessionStorage.getItem("rgPicked"))openSheet("cls")}catch(e){}setInterval(()=>{if(!M.hidden){const m=$("rmic");m&&(m.textContent=micOn?"🎤 麥克風已開啟":"🎤 開啟麥克風",m.classList.toggle("on",!!micOn));roll()}},1500);
